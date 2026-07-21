@@ -1410,6 +1410,7 @@ cardValidate.addEventListener("click",()=>{
 document.addEventListener("focusin",e=>{
   const inp=e.target;
   if(!inp.matches || !inp.matches("input,select,textarea")) return;
+  if(!inp.dataset.kind) return;   // seuls les champs de données éditables déclenchent "Valider"
   const card=inp.closest(".card"); if(!card) return;
   cvCard=card; card.insertAdjacentElement("afterend",cardValidate); cardValidate.style.display="block";
 });
