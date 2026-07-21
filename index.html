@@ -293,6 +293,10 @@
   .auth-err{font-size:13px;font-weight:600;color:var(--red);min-height:18px;margin:2px 0 8px}
   .auth-toggle{text-align:center;font-size:13.5px;color:var(--muted);margin-top:16px}
   .auth-toggle a{color:var(--primary-deep);font-weight:700;cursor:pointer;text-decoration:underline}
+  .pw-wrap{position:relative}
+  .pw-wrap input{padding-right:44px}
+  .pw-eye{position:absolute;right:6px;top:50%;transform:translateY(-50%);background:none;border:0;color:var(--muted);cursor:pointer;padding:7px;display:grid;place-items:center;border-radius:9px}
+  .pw-eye:hover{color:var(--primary-deep);background:rgba(236,122,44,.08)}
   .chip:hover{border-color:var(--primary);color:var(--primary-deep);transform:translateY(-1px)}
   .chip.sel:hover{color:#fff}
   .chk:hover{border-color:var(--green);transform:scale(1.08)}
@@ -460,8 +464,15 @@
     <h3 id="authTitle">Connexion</h3>
     <p class="sub" id="authSub">Retrouve ton budget sur tous tes appareils.</p>
     <div class="field"><label class="f">Email</label><input id="authEmail" type="email" autocomplete="email" onkeydown="if(event.key==='Enter')authSubmit()"></div>
-    <div class="field"><label class="f">Mot de passe</label><input id="authPw" type="password" autocomplete="current-password" onkeydown="if(event.key==='Enter')authSubmit()"></div>
+    <div class="field"><label class="f">Mot de passe</label>
+      <div class="pw-wrap"><input id="authPw" type="password" autocomplete="current-password" onkeydown="if(event.key==='Enter')authSubmit()"><button type="button" class="pw-eye" onclick="togglePw('authPw',this)" aria-label="Afficher/masquer le mot de passe"></button></div>
+    </div>
+    <div class="field" id="authPw2Field" style="display:none"><label class="f">Confirmer le mot de passe</label>
+      <div class="pw-wrap"><input id="authPw2" type="password" autocomplete="new-password" onkeydown="if(event.key==='Enter')authSubmit()"><button type="button" class="pw-eye" onclick="togglePw('authPw2',this)" aria-label="Afficher/masquer le mot de passe"></button></div>
+    </div>
+    <div id="authHint" class="sub" style="display:none;font-size:12px;margin:-4px 0 10px">Min. 8 caractères, avec au moins une majuscule, une minuscule et un chiffre.</div>
     <div id="authErr" class="auth-err"></div>
+    <div id="turnstile" style="display:flex;justify-content:center;margin-bottom:12px"></div>
     <button class="btn" id="authSubmit" onclick="authSubmit()">Se connecter</button>
     <div class="auth-toggle">Pas encore de compte ? <a id="authToggle" onclick="toggleAuthMode()">Créer un compte</a></div>
   </div>
@@ -474,7 +485,10 @@
    Tant qu'elles ne sont pas renseignées, l'app fonctionne en local uniquement. */
 const SUPABASE_URL = "https://sfbpxtuvveicsrevhcrk.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNmYnB4dHV2dmVpY3NyZXZoY3JrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ2NTQ1NTMsImV4cCI6MjEwMDIzMDU1M30.r5VjQIAHdMfqqYBde9UGe6tS6BNfxOKevFXFNZYpfBg";
-let sb=null, currentUser=null, syncTimer=null;
+/* Anti-robots (facultatif) : colle ta clé "site" Cloudflare Turnstile. Laisse vide pour désactiver. */
+const TURNSTILE_SITE_KEY = "0x4AAAAAAD6tnrhvgBARHF2v";
+const MIN_PW = 8; // longueur minimale du mot de passe
+let sb=null, currentUser=null, syncTimer=null, captchaToken=null, turnstileWidget=null;
 
 /* ============ DATA MODEL ============ */
 const CATS = [
@@ -1193,12 +1207,17 @@ function showApp(){
   document.getElementById("logoutBtn").style.display=(sb&&currentUser)?"grid":"none";
   render(); maybePromptBase();
 }
+const EYE=`<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.06 12.35a1 1 0 0 1 0-.7 10.75 10.75 0 0 1 19.88 0 1 1 0 0 1 0 .7 10.75 10.75 0 0 1-19.88 0"/><circle cx="12" cy="12" r="3"/></svg>`;
+const EYEOFF=`<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.73 5.08a10.7 10.7 0 0 1 11.2 6.57 1 1 0 0 1 0 .7 10.7 10.7 0 0 1-1.44 2.49"/><path d="M14.08 14.16a3 3 0 0 1-4.24-4.24"/><path d="M17.48 17.5A10.75 10.75 0 0 1 2.06 12.35a1 1 0 0 1 0-.7 10.75 10.75 0 0 1 4.45-5.14"/><path d="m2 2 20 20"/></svg>`;
+window.togglePw=(id,btn)=>{ const i=document.getElementById(id); const show=i.type==="password"; i.type=show?"text":"password"; btn.innerHTML=show?EYEOFF:EYE; };
 let authMode="login";
 window.toggleAuthMode=()=>{
   authMode = authMode==="login" ? "signup" : "login";
   document.getElementById("authTitle").textContent = authMode==="login"?"Connexion":"Créer un compte";
   document.getElementById("authSubmit").textContent = authMode==="login"?"Se connecter":"Créer le compte";
   document.getElementById("authToggle").textContent = authMode==="login"?"Créer un compte":"J'ai déjà un compte";
+  document.getElementById("authPw2Field").style.display = authMode==="signup" ? "block" : "none";
+  document.getElementById("authHint").style.display = authMode==="signup" ? "block" : "none";
   const e=document.getElementById("authErr"); e.textContent="";
 };
 window.authSubmit=async()=>{
@@ -1206,20 +1225,27 @@ window.authSubmit=async()=>{
   const pw=document.getElementById("authPw").value;
   const err=document.getElementById("authErr"); err.style.color="var(--red)";
   if(!email||!pw){ err.textContent="Renseigne ton email et ton mot de passe."; return; }
+  if(TURNSTILE_SITE_KEY && !captchaToken){ err.textContent="Merci de valider l'anti-robot ci-dessous."; return; }
+  const opts = captchaToken ? {captchaToken} : undefined;
   const btn=document.getElementById("authSubmit"); const lbl=btn.textContent; btn.disabled=true; btn.textContent="…";
   try{
     if(authMode==="signup"){
-      const {data,error}=await sb.auth.signUp({email,password:pw});
+      const pw2=document.getElementById("authPw2").value;
+      if(pw.length<MIN_PW){ err.textContent=`Mot de passe : ${MIN_PW} caractères minimum.`; return; }
+      if(!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(pw)){ err.textContent="Il faut une minuscule, une majuscule et un chiffre."; return; }
+      if(pw!==pw2){ err.textContent="Les mots de passe ne correspondent pas."; return; }
+      const {data,error}=await sb.auth.signUp({email,password:pw,options:opts});
       if(error) throw error;
       if(!data.session){ err.style.color="var(--green)"; err.textContent="Compte créé ! Confirme via l'email reçu, puis connecte-toi."; toggleAuthMode(); return; }
       currentUser=data.session.user; await pullCloud(); showApp();
     } else {
-      const {data,error}=await sb.auth.signInWithPassword({email,password:pw});
+      const {data,error}=await sb.auth.signInWithPassword({email,password:pw,options:opts});
       if(error) throw error;
       currentUser=data.session.user; await pullCloud(); showApp();
     }
   }catch(e){ err.style.color="var(--red)"; err.textContent=e.message||"Erreur de connexion."; }
-  finally{ btn.disabled=false; btn.textContent=lbl; }
+  finally{ btn.disabled=false; btn.textContent=lbl;
+    if(TURNSTILE_SITE_KEY && window.turnstile && turnstileWidget!=null){ try{ window.turnstile.reset(turnstileWidget); }catch(e){} captchaToken=null; } }
 };
 window.signOut=async()=>{
   confirmDialog("Se déconnecter ? Tes données restent enregistrées dans le cloud.",async()=>{
@@ -1228,8 +1254,18 @@ window.signOut=async()=>{
   },"Se déconnecter",false);
 };
 
+function loadTurnstile(){
+  if(!TURNSTILE_SITE_KEY) return;
+  const s=document.createElement("script");
+  s.src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit"; s.async=true; s.defer=true;
+  s.onload=()=>{ try{ turnstileWidget=window.turnstile.render("#turnstile",{sitekey:TURNSTILE_SITE_KEY,
+    callback:t=>captchaToken=t, "expired-callback":()=>captchaToken=null, theme:"light"}); }catch(e){} };
+  document.head.appendChild(s);
+}
 async function boot(){
   injectIcons();
+  document.querySelectorAll(".pw-eye").forEach(b=>b.innerHTML=EYE);
+  loadTurnstile();
   if(initSupabase()){
     try{
       const {data}=await sb.auth.getSession();
