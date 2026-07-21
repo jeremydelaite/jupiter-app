@@ -472,13 +472,14 @@
     </div>
     <div id="authHint" class="sub" style="display:none;font-size:12px;margin:-4px 0 10px">Min. 8 caractères, avec au moins une majuscule, une minuscule et un chiffre.</div>
     <div id="authErr" class="auth-err"></div>
-    <div id="turnstile" style="display:flex;justify-content:center;margin-bottom:12px"></div>
+    <div style="display:flex;justify-content:center;margin-bottom:12px"><div class="cf-turnstile" data-sitekey="0x4AAAAAAD6tnrhvgBARHF2v" data-callback="onCaptcha" data-expired-callback="onCaptchaExpire" data-theme="light"></div></div>
     <button class="btn" id="authSubmit" onclick="authSubmit()">Se connecter</button>
     <div class="auth-toggle">Pas encore de compte ? <a id="authToggle" onclick="toggleAuthMode()">Créer un compte</a></div>
   </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
 <script>
 /* ============ CONFIG SUPABASE ============ */
 /* Remplace ces 2 valeurs par celles de ton projet Supabase (Settings → API).
@@ -1201,7 +1202,7 @@ async function pushCloud(){
   try{ await sb.from('jupiter_data').upsert({user_id:currentUser.id, data:store, updated_at:new Date().toISOString()},{onConflict:'user_id'}); }
   catch(e){ console.warn("push",e); }
 }
-function showAuth(){ document.getElementById("authOverlay").style.display="flex"; document.body.style.overflow="hidden"; loadTurnstile(); }
+function showAuth(){ document.getElementById("authOverlay").style.display="flex"; document.body.style.overflow="hidden"; }
 function showApp(){
   document.getElementById("authOverlay").style.display="none"; document.body.style.overflow="";
   document.getElementById("logoutBtn").style.display=(sb&&currentUser)?"grid":"none";
@@ -1245,7 +1246,7 @@ window.authSubmit=async()=>{
     }
   }catch(e){ err.style.color="var(--red)"; err.textContent=e.message||"Erreur de connexion."; }
   finally{ btn.disabled=false; btn.textContent=lbl;
-    if(TURNSTILE_SITE_KEY && window.turnstile && turnstileWidget!=null){ try{ window.turnstile.reset(turnstileWidget); }catch(e){} captchaToken=null; } }
+    if(TURNSTILE_SITE_KEY && window.turnstile){ try{ window.turnstile.reset(); }catch(e){} captchaToken=null; } }
 };
 window.signOut=async()=>{
   confirmDialog("Se déconnecter ? Tes données restent enregistrées dans le cloud.",async()=>{
@@ -1254,22 +1255,8 @@ window.signOut=async()=>{
   },"Se déconnecter",false);
 };
 
-let turnstileLoading=false;
-window.onloadTurnstileCallback=function(){
-  if(turnstileWidget!=null || !window.turnstile || !window.turnstile.render) return;
-  try{ turnstileWidget=window.turnstile.render("#turnstile",{sitekey:TURNSTILE_SITE_KEY,
-    callback:t=>captchaToken=t, "expired-callback":()=>captchaToken=null, theme:"light"}); }
-  catch(e){ console.warn("turnstile",e); }
-};
-function loadTurnstile(){
-  if(!TURNSTILE_SITE_KEY) return;
-  if(window.turnstile && window.turnstile.render){ window.onloadTurnstileCallback(); return; }
-  if(turnstileLoading || document.getElementById("cf-turnstile-script")) return;
-  turnstileLoading=true;
-  const s=document.createElement("script"); s.id="cf-turnstile-script";
-  s.src="https://challenges.cloudflare.com/turnstile/v0/api.js?onload=onloadTurnstileCallback&render=explicit";
-  s.async=true; s.defer=true; document.head.appendChild(s);
-}
+window.onCaptcha=t=>{ captchaToken=t; };
+window.onCaptchaExpire=()=>{ captchaToken=null; };
 async function boot(){
   injectIcons();
   document.querySelectorAll(".pw-eye").forEach(b=>b.innerHTML=EYE);
