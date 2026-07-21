@@ -1201,7 +1201,7 @@ async function pushCloud(){
   try{ await sb.from('jupiter_data').upsert({user_id:currentUser.id, data:store, updated_at:new Date().toISOString()},{onConflict:'user_id'}); }
   catch(e){ console.warn("push",e); }
 }
-function showAuth(){ document.getElementById("authOverlay").style.display="flex"; document.body.style.overflow="hidden"; }
+function showAuth(){ document.getElementById("authOverlay").style.display="flex"; document.body.style.overflow="hidden"; loadTurnstile(); }
 function showApp(){
   document.getElementById("authOverlay").style.display="none"; document.body.style.overflow="";
   document.getElementById("logoutBtn").style.display=(sb&&currentUser)?"grid":"none";
@@ -1254,18 +1254,21 @@ window.signOut=async()=>{
   },"Se déconnecter",false);
 };
 
+let turnstileLoading=false;
 function loadTurnstile(){
   if(!TURNSTILE_SITE_KEY) return;
+  const doRender=()=>{ if(turnstileWidget!=null || !window.turnstile) return;
+    try{ turnstileWidget=window.turnstile.render("#turnstile",{sitekey:TURNSTILE_SITE_KEY,
+      callback:t=>captchaToken=t, "expired-callback":()=>captchaToken=null, theme:"light"}); }catch(e){ console.warn("turnstile",e); } };
+  if(window.turnstile){ doRender(); return; }
+  if(turnstileLoading) return; turnstileLoading=true;
   const s=document.createElement("script");
   s.src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit"; s.async=true; s.defer=true;
-  s.onload=()=>{ try{ turnstileWidget=window.turnstile.render("#turnstile",{sitekey:TURNSTILE_SITE_KEY,
-    callback:t=>captchaToken=t, "expired-callback":()=>captchaToken=null, theme:"light"}); }catch(e){} };
-  document.head.appendChild(s);
+  s.onload=doRender; document.head.appendChild(s);
 }
 async function boot(){
   injectIcons();
   document.querySelectorAll(".pw-eye").forEach(b=>b.innerHTML=EYE);
-  loadTurnstile();
   if(initSupabase()){
     try{
       const {data}=await sb.auth.getSession();
