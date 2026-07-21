@@ -198,6 +198,8 @@
   .lrow .lamt{margin-left:auto;font-weight:700}
   .lrow .del{background:none;border:0;color:var(--muted2);font-size:16px;cursor:pointer;padding:4px 6px;flex:none}
   .lrow .del:hover{color:var(--red)}
+  .del{display:grid;place-items:center}
+  .del svg{width:17px;height:17px;display:block}
   .amt-in{width:92px;text-align:right;padding:9px 10px;font-size:14px;border-radius:11px}
   .name-in{flex:1;min-width:60px;background:none;border:1px solid transparent;box-shadow:none;padding:8px 8px;font-weight:600;font-family:inherit;font-size:15px;color:var(--txt);border-radius:12px;transition:background .15s,box-shadow .15s,border-color .15s}
   .name-in:hover{cursor:text;border-color:var(--glass-border);
@@ -282,12 +284,18 @@
   .profile{position:relative;margin-left:8px;flex:none}
   .profile-btn{width:36px;height:36px;border-radius:50%;border:1px solid var(--glass-border);cursor:pointer;display:grid;place-items:center;
     background:radial-gradient(circle at 35% 30%,#ffc46b,#ec7a2c 65%,#b5471a);color:#fff;font-weight:800;font-size:15px;font-family:var(--font-display);box-shadow:var(--shadow-sm)}
-  .profile-dropdown{position:absolute;right:0;top:44px;min-width:214px;background:var(--card-solid);border:1px solid var(--glass-border);border-radius:16px;box-shadow:var(--shadow),var(--sheen);padding:8px;display:none;z-index:50}
+  .profile-dropdown{position:absolute;right:0;top:44px;min-width:214px;padding:8px;display:none;z-index:50;border-radius:18px;
+    background:linear-gradient(160deg,rgba(255,250,242,.82),rgba(255,242,228,.72));
+    backdrop-filter:blur(20px) saturate(1.6);-webkit-backdrop-filter:blur(20px) saturate(1.6);
+    border:1px solid var(--glass-border);box-shadow:0 20px 50px rgba(120,60,20,.28), var(--sheen)}
   .profile-dropdown.open{display:block;animation:riseIn .25s ease}
   .pd-email{font-size:12px;color:var(--muted);font-weight:600;padding:8px 10px;border-bottom:1px solid var(--line);margin-bottom:6px;word-break:break-all}
   .pd-item{display:flex;align-items:center;gap:10px;padding:10px;border-radius:11px;font-weight:600;cursor:pointer;color:var(--txt)}
-  .pd-item:hover{background:var(--card2)}
+  .pd-item:hover{background:rgba(236,122,44,.10)}
+  .pd-item.danger:hover{background:rgba(217,79,69,.12)}
   .pd-item.danger{color:var(--red)}
+  .pd-ic{display:flex;flex:none}
+  .pd-ic svg{width:18px;height:18px}
   .theme-row{display:flex;gap:10px;flex-wrap:wrap}
   .theme-opt{display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:14px;border:1px solid var(--line);font-weight:600;font-size:13.5px}
   .theme-opt.active{border-color:var(--primary);box-shadow:0 0 0 3px var(--glow)}
@@ -344,8 +352,8 @@
       <button class="profile-btn" onclick="toggleProfileMenu(event)" aria-label="Mon compte"><span id="profileInitial">?</span></button>
       <div class="profile-dropdown" id="profileDropdown">
         <div class="pd-email" id="profileEmail"></div>
-        <a class="pd-item" onclick="openAccount()"><span>👤</span> Mon compte</a>
-        <a class="pd-item danger" onclick="signOut()"><span>⎋</span> Déconnexion</a>
+        <a class="pd-item" onclick="openAccount()"><i class="pd-ic" data-ic="account"></i> Mon compte</a>
+        <a class="pd-item danger" onclick="signOut()"><i class="pd-ic" data-ic="logout"></i> Déconnexion</a>
       </div>
     </div>
   </div>
@@ -500,7 +508,7 @@
         <div class="soon-item">💱 Devise & format <span class="badge-soon">À venir</span></div>
       </div>
 
-      <button class="btn ghost" style="margin-top:16px" onclick="signOut()">⎋ Se déconnecter</button>
+      <button class="btn ghost" style="margin-top:16px" onclick="signOut()"><i class="bic" data-ic="logout"></i>Se déconnecter</button>
     </section>
   </main>
 </div>
@@ -584,6 +592,7 @@ const CAT_ICONS={
   autre:`<path d="M11 21.73a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73z"/><path d="M12 22V12"/><polyline points="3.29 7 12 12 20.71 7"/><path d="m7.5 4.27 9 5.15"/>`,
 };
 function catIcon(c,s){ s=s||20; return `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="${c.color||'#9c8a74'}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:block;flex:none">${CAT_ICONS[c.id]||CAT_ICONS.autre}</svg>`; }
+const TRASH=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>`;
 
 function seedJuly(){
   const f=(name,amt,paid)=>({name,planned:amt,actual:amt,paid});
@@ -929,7 +938,7 @@ function txRow(t, withDel){
     <div class="ci" style="background:${c.color}22;color:${c.color}">${catIcon(c)}</div>
     <div class="tinfo"><b>${c.name}</b><small>${dd}${t.note?" · "+escapeHtml(t.note):""}</small></div>
     <span class="tamt">-${fmt(t.amount)}</span>
-    ${withDel?`<button class="del" onclick="event.stopPropagation();delTx(${t.i})">🗑</button>`:""}
+    ${withDel?`<button class="del" onclick="event.stopPropagation();delTx(${t.i})">${TRASH}</button>`:""}
   </div>`;
 }
 window.delTx=i=>confirmDialog("Supprimer cette dépense ?",()=>{ M().tx.splice(i,1); render(); toast("Dépense supprimée"); });
@@ -944,7 +953,7 @@ function renderFixed(){
       <div><span class="amt-lbl" style="color:${x.paid?'var(--green)':'var(--muted)'}">${x.paid?'Réel':'Prévu'}</span>
         <input class="amt-in" type="number" step="0.01" inputmode="decimal" value="${x.paid?x.actual:x.planned}" data-kind="fixed" data-i="${i}" data-field="${x.paid?'actual':'planned'}"></div>
     </div>
-    <button class="del" onclick="delItem('fixed',${i})">🗑</button>
+    <button class="del" onclick="delItem('fixed',${i})">${TRASH}</button>
   </div>`).join("") : '<div class="empty">Aucune charge fixe.</div>';
 }
 window.toggleFixed=i=>{ const fx=M().fixed[i]; fx.paid=!fx.paid; if(fx.paid) fx.actual=fx.planned; render(); };
@@ -960,7 +969,7 @@ function renderIncome(){
       <div><span class="amt-lbl" style="color:${x.received?'var(--green)':'var(--muted)'}">${x.received?'Reçu':'Prévu'}</span>
         <input class="amt-in" type="number" step="0.01" inputmode="decimal" value="${x.received?x.actual:x.planned}" data-kind="income" data-i="${i}" data-field="${x.received?'actual':'planned'}"></div>
     </div>
-    <button class="del" onclick="delItem('income',${i})">🗑</button>
+    <button class="del" onclick="delItem('income',${i})">${TRASH}</button>
   </div>`).join("") : '<div class="empty">Aucun revenu.</div>';
 }
 window.toggleIncome=i=>{ const x=M().income[i]; x.received=!x.received; if(x.received) x.actual=x.planned; render(); };
@@ -1001,7 +1010,7 @@ function renderAccounts(){
         <div><input class="amt-in" type="number" step="0.01" inputmode="decimal" value="${a.balance}" data-kind="accbal" data-id="${a.id}"></div>
         <div><input class="amt-in" type="number" step="0.01" inputmode="decimal" value="${a.goal||0}" data-kind="accgoal" data-id="${a.id}"></div>
       </div>
-      <button class="del" onclick="delAccount('${a.id}')">🗑</button>
+      <button class="del" onclick="delAccount('${a.id}')">${TRASH}</button>
     </div>`;
   }).join("") : '<div class="empty">Aucun compte. Ajoute un livret ou compte annexe.</div>';
   if(accs.length) html += `<div class="lrow" style="border-top:2px solid var(--line2)">
@@ -1021,7 +1030,7 @@ function renderSave(){
         <div><span class="amt-lbl" style="color:${x.done?'var(--green)':'var(--muted)'}">${x.done?'Réel':'Prévu'}</span>
           <input class="amt-in" type="number" step="0.01" inputmode="decimal" value="${x.done?x.actual:x.planned}" data-kind="saving" data-i="${i}" data-field="${x.done?'actual':'planned'}"></div>
       </div>
-      <button class="del" onclick="delItem('savings',${i})">🗑</button>
+      <button class="del" onclick="delItem('savings',${i})">${TRASH}</button>
     </div>`;
   }).join("") : '<div class="empty">Aucun versement ce mois.</div>';
 }
@@ -1244,6 +1253,8 @@ const ICONS={
   savecheck:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M12.5 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h10.2a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4v4.35"/><path d="m16 19 2 2 4-4"/><path d="M17 15.13V14a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7"/><path d="M7 3v4a1 1 0 0 0 1 1h7"/></svg>`,
   download:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V3"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/></svg>`,
   manage:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><line x1="21" x2="14" y1="4" y2="4"/><line x1="10" x2="3" y1="4" y2="4"/><line x1="21" x2="12" y1="12" y2="12"/><line x1="8" x2="3" y1="12" y2="12"/><line x1="21" x2="16" y1="20" y2="20"/><line x1="12" x2="3" y1="20" y2="20"/><line x1="14" x2="14" y1="2" y2="6"/><line x1="8" x2="8" y1="10" y2="14"/><line x1="16" x2="16" y1="18" y2="22"/></svg>`,
+  account:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>`,
+  logout:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg>`,
 };
 function injectIcons(){ document.querySelectorAll("[data-ic]").forEach(el=>{ el.innerHTML=ICONS[el.dataset.ic]||""; }); }
 
