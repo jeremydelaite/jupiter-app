@@ -1,5 +1,5 @@
 /* Jupiter — service worker (app installable + hors-ligne) */
-const CACHE = 'jupiter-v1';
+const CACHE = 'jupiter-v2';
 const ASSETS = [
   './', 'index.html', 'manifest.json',
   'jupiter-icon.png', 'icon-192.png', 'icon-512.png',
