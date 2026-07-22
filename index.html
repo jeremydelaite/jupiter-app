@@ -224,10 +224,10 @@
   .acc-col{width:92px}
   @media(max-width:859px){
     .acc-col{width:64px}
-    #accountList .amt-in{width:64px;padding-left:6px;padding-right:8px}
-    #accountList .lrow{gap:7px}
-    #accountList .fx-amts{gap:6px}
-    #accountList .name-in{min-width:0;font-size:13px}
+    #accountList .amt-in, #creditList .amt-in{width:64px;padding-left:6px;padding-right:8px}
+    #accountList .lrow, #creditList .lrow{gap:7px}
+    #accountList .fx-amts, #creditList .fx-amts{gap:6px}
+    #accountList .name-in, #creditList .name-in{min-width:0;font-size:13px}
   }
   #fixedList .lrow, #incomeList .lrow, #saveList .lrow{padding-top:22px}
   @media(max-width:859px){
@@ -479,12 +479,16 @@
 
     <!-- SAVINGS -->
     <section class="view" id="v-save">
-      <h2 class="title">Épargne</h2>
-      <p class="sub">Suis le solde de tes livrets et comptes annexes, et tes versements du mois.</p>
+      <h2 class="title">Épargne & crédits</h2>
+      <p class="sub">Suis le solde de tes livrets, comptes et crédits, et tes versements du mois.</p>
 
-      <div class="section-h"><h3>Épargne & crédits</h3></div>
-      <div class="toolbar"><button class="btn ghost sm" onclick="addAccount()">+ Ajouter un compte</button></div>
+      <div class="section-h"><h3>Épargne</h3></div>
+      <div class="toolbar"><button class="btn ghost sm" onclick="addAccount('epargne')">+ Ajouter un compte</button></div>
       <div class="card" id="accountList"></div>
+
+      <div class="section-h"><h3>Crédits</h3></div>
+      <div class="toolbar"><button class="btn ghost sm" onclick="addAccount('credit')">+ Ajouter un crédit</button></div>
+      <div class="card" id="creditList"></div>
 
       <div class="section-h"><h3>Versements du mois</h3><span class="muted" id="saveSum" style="font-size:13px;font-weight:600"></span></div>
       <div class="toolbar"><button class="btn ghost sm" onclick="openAdd('save')">+ Ajouter un versement</button></div>
@@ -644,6 +648,7 @@ const CAT_ICONS={
 function catIcon(c,s){ s=s||20; return `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="${c.color||'#9c8a74'}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:block;flex:none">${CAT_ICONS[c.id]||CAT_ICONS.autre}</svg>`; }
 const TRASH=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>`;
 const BANK=`<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#2fa79c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:block"><line x1="3" x2="21" y1="22" y2="22"/><line x1="6" x2="6" y1="18" y2="11"/><line x1="10" x2="10" y1="18" y2="11"/><line x1="14" x2="14" y1="18" y2="11"/><line x1="18" x2="18" y1="18" y2="11"/><polygon points="12 2 20 7 4 7"/></svg>`;
+const CARD=`<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#e58f2c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:block"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></svg>`;
 
 function seedJuly(){
   const f=(name,amt,paid)=>({name,planned:amt,actual:amt,paid});
@@ -1050,17 +1055,17 @@ function applyCredit(s){
 }
 function renderAccounts(){
   const accs=store.accounts||[];
-  const total=accs.reduce((a,x)=>a+(+x.balance||0),0);
-  const header=`<div class="lrow" style="padding-top:0">
-    <div style="width:36px;flex:none"></div>
-    <div style="flex:1"></div>
+  const sav=accs.filter(a=>(a.type||"epargne")!=="credit");
+  const cred=accs.filter(a=>a.type==="credit");
+  // ---- Épargne ----
+  const totalS=sav.reduce((a,x)=>a+(+x.balance||0),0);
+  const headerS=`<div class="lrow" style="padding-top:0">
+    <div style="width:36px;flex:none"></div><div style="flex:1"></div>
     <div class="fx-amts">
       <div class="acc-col" style="text-align:right"><span class="mini-lbl" style="margin:0">Réel</span></div>
       <div class="acc-col" style="text-align:right"><span class="mini-lbl" style="margin:0">Objectif</span></div>
-    </div>
-    <div style="width:26px;flex:none"></div>
-  </div>`;
-  let html = accs.length ? header + accs.map(a=>{
+    </div><div style="width:26px;flex:none"></div></div>`;
+  let hs = sav.length ? headerS + sav.map(a=>{
     const p=monthsToGoal(a);
     let proj="";
     if(p===null) proj=`<small class="muted">Pas d'objectif défini</small>`;
@@ -1079,11 +1084,27 @@ function renderAccounts(){
       </div>
       <button class="del" onclick="delAccount('${a.id}')">${TRASH}</button>
     </div>`;
-  }).join("") : '<div class="empty">Aucun compte. Ajoute un livret ou compte annexe.</div>';
-  if(accs.length) html += `<div class="lrow" style="border-top:2px solid var(--line2)">
+  }).join("") : '<div class="empty">Aucun compte épargne.</div>';
+  if(sav.length) hs += `<div class="lrow" style="border-top:2px solid var(--line2)">
     <div class="lname" style="flex:1">Total épargne</div>
-    <div class="lamt" style="color:var(--teal);font-size:17px">${fmt(total)}</div></div>`;
-  document.getElementById("accountList").innerHTML=html;
+    <div class="lamt" style="color:var(--teal);font-size:17px">${fmt(totalS)}</div></div>`;
+  document.getElementById("accountList").innerHTML=hs;
+  // ---- Crédits ----
+  const totalC=cred.reduce((a,x)=>a+(+x.balance||0),0);
+  const headerC=`<div class="lrow" style="padding-top:0">
+    <div style="width:36px;flex:none"></div><div style="flex:1"></div>
+    <div class="fx-amts"><div class="acc-col" style="text-align:right"><span class="mini-lbl" style="margin:0">Restant dû</span></div></div>
+    <div style="width:26px;flex:none"></div></div>`;
+  let hc = cred.length ? headerC + cred.map(a=>`<div class="lrow">
+      <div class="ci" style="width:36px;height:36px;border-radius:12px;background:#fdecd2;display:grid;place-items:center;flex:none">${CARD}</div>
+      <input class="name-in" type="text" value="${escapeHtml(a.name)}" data-kind="accname" data-id="${a.id}" style="min-width:0">
+      <div class="fx-amts"><div><input class="amt-in" type="number" step="0.01" inputmode="decimal" value="${a.balance}" data-kind="accbal" data-id="${a.id}"></div></div>
+      <button class="del" onclick="delAccount('${a.id}')">${TRASH}</button>
+    </div>`).join("") : '<div class="empty">Aucun crédit.</div>';
+  if(cred.length) hc += `<div class="lrow" style="border-top:2px solid var(--line2)">
+    <div class="lname" style="flex:1">Total crédits</div>
+    <div class="lamt" style="color:var(--red);font-size:17px">${fmt(totalC)}</div></div>`;
+  const cl=document.getElementById("creditList"); if(cl) cl.innerHTML=hc;
 }
 function renderSave(){
   document.getElementById("saveSum").innerHTML=`Versé ${fmt(actualSavings())} / prévu ${fmt(plannedSavings())}`;
@@ -1106,26 +1127,31 @@ window.setSaving=(i,field,v)=>{ const s=M().savings[i]; s[field]=+v||0; applyCre
 window.setAccountGoal=(id,v)=>{ const a=findAcc(id); if(a){ a.goal=+v||0; save(); renderAccounts(); } };
 
 /* comptes d'épargne */
-window.addAccount=()=>{
+window.addAccount=(type)=>{
+  type = type==="credit" ? "credit" : "epargne";
+  const isCred = type==="credit";
   const box=document.getElementById("modalBox");
   box.innerHTML=`<button class="mclose" onclick="closeModal()">✕</button>
-    <h3>Nouveau compte</h3><p class="sub">Un livret ou compte annexe à suivre.</p>
-    <div class="field"><label class="f">Nom</label><input id="aName" type="text" placeholder="Ex: Livret A"></div>
-    <div class="field"><label class="f">Solde actuel (€)</label><input id="aBal" type="number" step="0.01" inputmode="decimal" placeholder="0,00"></div>
-    <div class="field"><label class="f">Objectif (€, optionnel)</label><input id="aGoal" type="number" step="0.01" inputmode="decimal" placeholder="0,00"></div>
-    <button class="btn" onclick="saveAccount()">Ajouter le compte</button>`;
+    <h3>${isCred?"Nouveau crédit":"Nouveau compte épargne"}</h3><p class="sub">${isCred?"Un crédit ou une dette à suivre.":"Un livret ou compte annexe à suivre."}</p>
+    <div class="field"><label class="f">Nom</label><input id="aName" type="text" placeholder="${isCred?'Ex: Prêt auto':'Ex: Livret A'}"></div>
+    <div class="field"><label class="f">${isCred?'Montant restant dû (€)':'Solde actuel (€)'}</label><input id="aBal" type="number" step="0.01" inputmode="decimal" placeholder="0,00"></div>
+    ${isCred?"":`<div class="field"><label class="f">Objectif (€, optionnel)</label><input id="aGoal" type="number" step="0.01" inputmode="decimal" placeholder="0,00"></div>`}
+    <button class="btn" onclick="saveAccount('${type}')">Ajouter</button>`;
   setTimeout(()=>document.getElementById("aName").focus(),100);
   document.getElementById("modalBg").classList.add("on"); document.body.style.overflow="hidden";
 };
-window.saveAccount=()=>{
+window.saveAccount=(type)=>{
+  type = type==="credit" ? "credit" : "epargne";
   const name=document.getElementById("aName").value.trim();
   const bal=parseFloat(document.getElementById("aBal").value)||0;
   if(!name){toast("Entre un nom",true);return;}
-  const goal=parseFloat(document.getElementById("aGoal").value)||0;
+  const goalEl=document.getElementById("aGoal");
+  const goal=goalEl?(parseFloat(goalEl.value)||0):0;
   if(!store.accounts) store.accounts=[];
-  store.accounts.push({id:uid(), name, balance:bal, goal});
-  closeModal(); render(); toast("Compte ajouté ✓");
+  store.accounts.push({id:uid(), name, balance:bal, goal, type});
+  closeModal(); render(); toast(isCredType(type)?"Crédit ajouté ✓":"Compte ajouté ✓");
 };
+function isCredType(t){ return t==="credit"; }
 window.setAccountBalance=(id,v)=>{ const a=findAcc(id); if(a){ a.balance=+v||0; save(); renderAccounts(); } };
 window.delAccount=id=>{
   const a=findAcc(id); if(!a) return;
@@ -1246,8 +1272,8 @@ function openAdd(type,editIdx){
       </div>
       <button class="btn" onclick="saveExpense()">${ed?'Enregistrer':'Ajouter la dépense'}</button>`;
   } else if(type==="save"){
-    const accs=store.accounts||[];
-    if(!accs.length){ toast("Ajoute d'abord un compte",true); addAccount(); return; }
+    const accs=(store.accounts||[]).filter(a=>(a.type||"epargne")!=="credit");
+    if(!accs.length){ toast("Ajoute d'abord un compte épargne",true); addAccount("epargne"); return; }
     html=`<button class="mclose" onclick="closeModal()">✕</button>
       <h3>Nouveau versement</h3><p class="sub">Versement prévu ce mois vers un compte.</p>
       <div class="field"><label class="f">Compte</label>
