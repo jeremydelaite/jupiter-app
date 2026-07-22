@@ -69,11 +69,13 @@
   .month-pick button{background:none;border:0;color:var(--primary-deep);width:38px;font-size:17px;cursor:pointer;display:grid;place-items:center;transition:background .15s}
   .month-pick button:hover{background:rgba(236,122,44,.12)}
   .month-pick button:active{background:rgba(236,122,44,.2)}
-  .month-select{border:0;border-left:1px solid var(--glass-border);border-right:1px solid var(--glass-border);
-    color:var(--txt);font-weight:700;border-radius:0;padding:8px 12px;font-size:14px;text-transform:capitalize;cursor:pointer;
-    max-width:150px;font-family:inherit;outline:none;background:none;backdrop-filter:none;box-shadow:none;text-align:center;transition:background .15s}
-  .month-select:hover{background:rgba(236,122,44,.06)}
-  .month-select:focus{background:rgba(236,122,44,.10);box-shadow:none}
+  .month-cur{position:relative;display:flex;align-items:center;justify-content:center;gap:3px;
+    border-left:1px solid var(--glass-border);border-right:1px solid var(--glass-border);
+    padding:9px 14px;min-width:84px;font-weight:700;font-size:14px;text-transform:capitalize;color:var(--txt);transition:background .15s}
+  .month-cur:hover{background:rgba(236,122,44,.06)}
+  .month-cur select{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;border:0;background:none;font-family:inherit;font-size:16px}
+  .month-cur .my-year{color:var(--muted)}
+  @media(max-width:859px){ .month-cur .my-year{display:none} .month-cur{min-width:66px;padding:9px 12px} }
 
   nav.side{display:none}
   @media(min-width:860px){
@@ -212,6 +214,11 @@
   .amt-lbl{position:absolute;top:-17px;left:2px;width:100%;text-align:left;font-size:9.5px;color:var(--muted);font-weight:800;text-transform:uppercase;letter-spacing:.3px;margin:0}
   .amt-in.dim{opacity:.5}
   #fixedList .lrow, #incomeList .lrow, #saveList .lrow{padding-top:22px}
+  @media(max-width:859px){
+    #fixedList .name-in, #incomeList .name-in, #saveList .name-in{font-size:12.5px;padding-left:6px;padding-right:6px}
+    #fixedList .amt-in, #incomeList .amt-in, #saveList .amt-in{width:76px;padding-left:6px}
+    #fixedList .lrow, #incomeList .lrow, #saveList .lrow{gap:7px}
+  }
   .mini-btn{margin-top:6px;background:var(--card2);border:1px solid var(--line);color:var(--primary-deep);font-weight:700;font-size:11.5px;padding:5px 11px;border-radius:10px;cursor:pointer}
   .mini-btn:hover{background:#fff}
 
@@ -252,6 +259,7 @@
   .subtabs a{flex:1;text-align:center;padding:10px 4px;border-radius:12px;font-weight:600;font-size:13px;color:var(--muted);cursor:pointer;transition:.18s}
   .subtabs a.active{background:linear-gradient(120deg,var(--primary),var(--primary2));color:#fff;box-shadow:0 4px 12px var(--glow)}
   @media(max-width:859px){.subtabs{display:flex}}
+  .subtabs.base-subtabs{display:flex}
   .tx-filter-sel{display:none;margin-bottom:16px;text-transform:capitalize;font-weight:600}
   @media(max-width:859px){#txFilter{display:none} .tx-filter-sel{display:block}}
 
@@ -347,7 +355,8 @@
     <div class="brand" onclick="go('dash')"><span class="dot"><img src="jupiter-icon.png" alt="Jupiter"></span> Jupiter</div>
     <div class="month-pick">
       <button id="prevM">‹</button>
-      <select id="monthSelect" class="month-select"></select>
+      <div class="month-cur"><span id="monthLabel">mois</span><span class="my-year" id="monthYear"></span>
+        <select id="monthSelect" aria-label="Choisir le mois"></select></div>
       <button id="nextM">›</button>
     </div>
     <div class="profile" id="profileMenu" style="display:none">
@@ -355,6 +364,7 @@
       <div class="profile-dropdown" id="profileDropdown">
         <div class="pd-email" id="profileEmail"></div>
         <a class="pd-item" onclick="openAccount()"><i class="pd-ic" data-ic="account"></i> Mon compte</a>
+        <a class="pd-item" onclick="openSetBase()"><i class="pd-ic" data-ic="savecheck"></i> Définir la base</a>
         <a class="pd-item danger" onclick="signOut()"><i class="pd-ic" data-ic="logout"></i> Déconnexion</a>
       </div>
     </div>
@@ -375,12 +385,12 @@
     <!-- DASHBOARD -->
     <section class="view active" id="v-dash">
       <div class="hero">
-        <div class="lbl">Solde réel disponible</div>
+        <div class="lbl">Solde réel</div>
         <div class="amount" id="leftAmt">—</div>
         <div class="days" id="daysLeft"></div>
         <div class="progress"><i id="heroBar" style="width:0%"></i></div>
         <div class="hero-fore">
-          <div class="hf"><span class="hf-lbl">Restant prévu fin de mois</span><span class="hf-val" id="foreAmt">—</span></div>
+          <div class="hf"><span class="hf-lbl">Restant une fois tout payé</span><span class="hf-val" id="foreAmt">—</span></div>
         </div>
       </div>
 
@@ -424,10 +434,6 @@
         <button class="btn ghost sm" onclick="openAdd('fixed')">+ Ajouter</button>
       </div>
       <div class="card" id="fixedList"></div>
-      <div class="toolbar" style="margin-top:14px">
-        <button class="btn ghost sm" onclick="saveBase('fixed')"><i class="bic" data-ic="savecheck"></i>Définir comme base</button>
-        <button class="btn ghost sm" onclick="loadBase('fixed')"><i class="bic" data-ic="download"></i>Charger</button>
-      </div>
     </section>
 
     <!-- INCOME -->
@@ -439,10 +445,6 @@
         <button class="btn ghost sm" onclick="openAdd('income')">+ Ajouter</button>
       </div>
       <div class="card" id="incomeList"></div>
-      <div class="toolbar" style="margin-top:14px">
-        <button class="btn ghost sm" onclick="saveBase('income')"><i class="bic" data-ic="savecheck"></i>Définir comme base</button>
-        <button class="btn ghost sm" onclick="loadBase('income')"><i class="bic" data-ic="download"></i>Charger les revenus</button>
-      </div>
     </section>
 
     <!-- SAVINGS -->
@@ -457,11 +459,6 @@
       <div class="section-h"><h3>Versements du mois</h3><span class="muted" id="saveSum" style="font-size:13px;font-weight:600"></span></div>
       <div class="toolbar"><button class="btn ghost sm" onclick="openAdd('save')">+ Ajouter un versement</button></div>
       <div class="card" id="saveList"></div>
-
-      <div class="toolbar" style="margin-top:14px">
-        <button class="btn ghost sm" onclick="saveBase('savings')"><i class="bic" data-ic="savecheck"></i>Définir comme base</button>
-        <button class="btn ghost sm" onclick="loadBase('savings')"><i class="bic" data-ic="download"></i>Charger l'épargne</button>
-      </div>
     </section>
 
     <!-- BUDGETS -->
@@ -471,7 +468,6 @@
       <p class="sub">Définis un budget prévisionnel, ou aligne-le sur ce que tu as réellement dépensé.</p>
       <div class="card" id="budgetList"></div>
       <div class="toolbar" style="margin-top:14px">
-        <button class="btn ghost sm" onclick="saveBase('budgets')"><i class="bic" data-ic="savecheck"></i>Définir comme base</button>
         <button class="btn ghost sm" onclick="loadBase('budgets')"><i class="bic" data-ic="download"></i>Charger les budgets</button>
       </div>
     </section>
@@ -511,6 +507,28 @@
       </div>
 
       <button class="btn ghost" style="margin-top:16px" onclick="signOut()"><i class="bic" data-ic="logout"></i>Se déconnecter</button>
+    </section>
+
+    <!-- DÉFINIR LA BASE -->
+    <section class="view" id="v-setbase">
+      <h2 class="title">Définir la base</h2>
+      <p class="sub">Configure ici tes revenus, charges fixes et budgets habituels. Ils seront proposés au chargement de chaque nouveau mois. Les modifications s'enregistrent avec le bouton « Valider ».</p>
+      <div class="subtabs base-subtabs" id="baseTabs">
+        <a data-btab="income" class="active" onclick="setBaseTab('income')">Revenus</a>
+        <a data-btab="fixed" onclick="setBaseTab('fixed')">Charges fixes</a>
+        <a data-btab="budget" onclick="setBaseTab('budget')">Budgets</a>
+      </div>
+      <div id="baseIncomeBlock">
+        <div class="toolbar"><button class="btn ghost sm" onclick="addBase('income')">+ Ajouter un revenu</button></div>
+        <div class="card" id="baseIncomeList"></div>
+      </div>
+      <div id="baseFixedBlock" style="display:none">
+        <div class="toolbar"><button class="btn ghost sm" onclick="addBase('fixed')">+ Ajouter une charge</button></div>
+        <div class="card" id="baseFixedList"></div>
+      </div>
+      <div id="baseBudgetBlock" style="display:none">
+        <div class="card" id="baseBudgetList"></div>
+      </div>
     </section>
   </main>
 </div>
@@ -732,6 +750,8 @@ function ensureReport(key){
   }
 }
 function M(){ ensureMonth(store.current); return store.months[store.current]; }
+function T(){ if(!store.template) store.template={income:[],fixed:[],savings:[],budgets:{}};
+  const t=store.template; if(!t.income)t.income=[]; if(!t.fixed)t.fixed=[]; if(!t.savings)t.savings=[]; if(!t.budgets)t.budgets={}; return t; }
 
 /* ============ BASE / TEMPLATE ============ */
 const SLBL={income:"revenus", fixed:"charges fixes", savings:"épargne", budgets:"budgets"};
@@ -838,6 +858,9 @@ function buildMonthSelect(){
   const sorted=[...keys].sort();
   document.getElementById("monthSelect").innerHTML =
     sorted.map(k=>`<option value="${k}" ${k===cur?"selected":""}>${cap(monthName(k))}</option>`).join("");
+  const parts=monthName(cur).split(" ");
+  document.getElementById("monthLabel").textContent=cap(parts[0]);
+  document.getElementById("monthYear").textContent=parts.slice(1).join(" ");
 }
 function render(){
   buildMonthSelect();
@@ -861,7 +884,7 @@ function render(){
   document.getElementById("sSave").textContent=fmt(actualSavings());
 
   renderDonut(); renderCatProgress(); renderRecent();
-  renderTx(); renderFixed(); renderIncome(); renderAccounts(); renderSave(); renderBudget();
+  renderTx(); renderFixed(); renderIncome(); renderAccounts(); renderSave(); renderBudget(); renderBase();
   save();
 }
 
@@ -1094,6 +1117,38 @@ window.setBudget=(id,v)=>{ M().budgets[id]=+v||0; save();
   document.getElementById("sVar").innerHTML=fmt(totalVar())+` <small>/ ${fmt(budgetTotal())}</small>`; };
 window.alignBudget=id=>{ M().budgets[id]=spentByCat()[id]; render(); toast("Budget aligné ✓"); };
 
+/* ---- Page « Définir la base » (édite le modèle récurrent) ---- */
+function renderBase(){
+  const t=T();
+  const il=document.getElementById("baseIncomeList");
+  if(il) il.innerHTML = t.income.length ? t.income.map((x,i)=>`<div class="lrow">
+    <input class="name-in" type="text" value="${escapeHtml(x.name)}" data-kind="bincname" data-i="${i}">
+    <div class="fx-amts"><div><input class="amt-in" type="number" step="0.01" inputmode="decimal" value="${x.planned}" data-kind="binc" data-i="${i}"></div></div>
+    <button class="del" onclick="delBase('income',${i})">${TRASH}</button>
+  </div>`).join("") : '<div class="empty">Aucun revenu de base. Ajoute-en un.</div>';
+  const fl=document.getElementById("baseFixedList");
+  if(fl) fl.innerHTML = t.fixed.length ? t.fixed.map((x,i)=>`<div class="lrow">
+    <input class="name-in" type="text" value="${escapeHtml(x.name)}" data-kind="bfixname" data-i="${i}">
+    <div class="fx-amts"><div><input class="amt-in" type="number" step="0.01" inputmode="decimal" value="${x.planned}" data-kind="bfix" data-i="${i}"></div></div>
+    <button class="del" onclick="delBase('fixed',${i})">${TRASH}</button>
+  </div>`).join("") : '<div class="empty">Aucune charge fixe de base. Ajoute-en une.</div>';
+  const bl=document.getElementById("baseBudgetList");
+  if(bl) bl.innerHTML = CATS.map(c=>`<div class="lrow">
+    <div class="ci" style="width:36px;height:36px;border-radius:12px;background:${c.color}22;color:${c.color};display:grid;place-items:center;flex:none">${catIcon(c)}</div>
+    <div class="lname" style="flex:1;min-width:80px">${c.name}</div>
+    <input class="amt-in" type="number" step="0.01" value="${t.budgets[c.id]||0}" data-kind="bbud" data-catid="${c.id}">
+  </div>`).join("");
+}
+window.setBaseTab=(tab)=>{
+  document.querySelectorAll("#baseTabs [data-btab]").forEach(b=>b.classList.toggle("active",b.dataset.btab===tab));
+  document.getElementById("baseIncomeBlock").style.display = tab==="income"?"block":"none";
+  document.getElementById("baseFixedBlock").style.display  = tab==="fixed" ?"block":"none";
+  document.getElementById("baseBudgetBlock").style.display = tab==="budget"?"block":"none";
+};
+window.openSetBase=()=>{ const d=document.getElementById("profileDropdown"); if(d) d.classList.remove("open"); setBaseTab("income"); go("setbase"); renderBase(); };
+window.addBase=(type)=> openAdd(type==="income"?"bincome":"bfixed");
+window.delBase=(type,i)=>{ confirmDialog("Retirer cet élément de la base ?",()=>{ T()[type].splice(i,1); save(); render(); toast("Retiré de la base"); }); };
+
 window.delItem=(type,i)=>{
   const names={fixed:"cette charge fixe",income:"ce revenu",savings:"ce versement"};
   confirmDialog("Supprimer "+names[type]+" ?",()=>{
@@ -1159,9 +1214,10 @@ function openAdd(type,editIdx){
       <div class="field"><label class="f">Montant (€)</label><input id="mAmt" type="number" step="0.01" inputmode="decimal" placeholder="0,00"></div>
       <button class="btn" onclick="saveLine('save')">Ajouter</button>`;
   } else {
-    const titles={fixed:"charge fixe",income:"revenu"};
-    const extra = type==="fixed" ? "prévu (€)" : "montant (€)";
-    const ph = type==="fixed" ? "Ex: Netflix, Loyer…" : "Ex: Salaire, Prime, Virement de…";
+    const titles={fixed:"charge fixe",income:"revenu",bfixed:"charge fixe (base)",bincome:"revenu (base)"};
+    const isFixedLike = (type==="fixed"||type==="bfixed");
+    const extra = isFixedLike ? "prévu (€)" : "montant (€)";
+    const ph = isFixedLike ? "Ex: Netflix, Loyer…" : "Ex: Salaire, Prime, Virement de…";
     html=`<button class="mclose" onclick="closeModal()">✕</button>
       <h3>Nouveau ${titles[type]}</h3>
       <div class="field"><label class="f">Nom</label><input id="mName" type="text" placeholder="${ph}"></div>
@@ -1211,6 +1267,8 @@ window.saveLine=(type)=>{
   const amt=parseFloat(document.getElementById("mAmt").value);
   if(!name){toast("Entre un nom",true);return;}
   if(isNaN(amt)||amt<0){toast("Montant invalide",true);return;}
+  if(type==="bincome"){ T().income.push({name,planned:amt}); save(); closeModal(); render(); toast("Ajouté à la base ✓"); return; }
+  if(type==="bfixed"){ T().fixed.push({name,planned:amt}); save(); closeModal(); render(); toast("Ajouté à la base ✓"); return; }
   if(type==="fixed") M().fixed.push({name,planned:amt,actual:amt,paid:false});
   else M().income.push({name,planned:amt,actual:amt,received:false});
   closeModal(); render(); toast("Ajouté ✓");
@@ -1398,6 +1456,11 @@ function commitInputs(scope){
     else if(k.kind==="fixedname"){ if(inp.value.trim()) M().fixed[+k.i].name=inp.value.trim(); }
     else if(k.kind==="incomename"){ if(inp.value.trim()) M().income[+k.i].name=inp.value.trim(); }
     else if(k.kind==="accname"){ const a=findAcc(k.id); if(a && inp.value.trim()) a.name=inp.value.trim(); }
+    else if(k.kind==="binc") T().income[+k.i].planned=v;
+    else if(k.kind==="bincname"){ if(inp.value.trim()) T().income[+k.i].name=inp.value.trim(); }
+    else if(k.kind==="bfix") T().fixed[+k.i].planned=v;
+    else if(k.kind==="bfixname"){ if(inp.value.trim()) T().fixed[+k.i].name=inp.value.trim(); }
+    else if(k.kind==="bbud") T().budgets[k.catid]=v;
   });
 }
 function revertInputs(scope){
@@ -1412,6 +1475,11 @@ function revertInputs(scope){
     else if(k.kind==="fixedname") v=M().fixed[+k.i].name;
     else if(k.kind==="incomename") v=M().income[+k.i].name;
     else if(k.kind==="accname"){ const a=findAcc(k.id); v=a?a.name:""; }
+    else if(k.kind==="binc") v=T().income[+k.i].planned;
+    else if(k.kind==="bincname") v=T().income[+k.i].name;
+    else if(k.kind==="bfix") v=T().fixed[+k.i].planned;
+    else if(k.kind==="bfixname") v=T().fixed[+k.i].name;
+    else if(k.kind==="bbud") v=T().budgets[k.catid];
     if(v!==undefined) inp.value=v;
   });
 }
