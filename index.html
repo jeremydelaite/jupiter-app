@@ -829,7 +829,8 @@ window.loadBase=(section)=>{
 function maybePromptBase(){
   const m=M();
   if(!store.template || m.promptedBase) return;
-  const empty = m.income.length===0 && m.fixed.length===0 && m.savings.length===0 && m.tx.length===0;
+  const incomeNoReport = (m.income||[]).filter(x=>!x.report).length;
+  const empty = incomeNoReport===0 && m.fixed.length===0 && m.savings.length===0 && m.tx.length===0;
   if(!empty) return;
   const any = ["income","fixed","savings","budgets"].some(hasSection);
   if(!any) return;
