@@ -605,7 +605,7 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="https://challenges.cloudflare.com/turnstile/v0/api.js?onload=onTurnstileReady&render=explicit" async defer></script>
+<script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" async defer></script>
 <script>
 /* ============ CONFIG SUPABASE ============ */
 /* Remplace ces 2 valeurs par celles de ton projet Supabase (Settings → API).
@@ -1408,12 +1408,15 @@ async function pushCloud(){
 }
 function showAuth(){ document.getElementById("authOverlay").style.display="flex"; document.body.style.overflow="hidden"; authShown=true; renderTurnstile(); }
 function renderTurnstile(){
-  if(!TURNSTILE_SITE_KEY || !turnstileReady || !authShown || turnstileWidget!==null || !window.turnstile) return;
-  try{ turnstileWidget=window.turnstile.render("#turnstile",{sitekey:TURNSTILE_SITE_KEY,
-    callback:t=>captchaToken=t, "expired-callback":()=>captchaToken=null, theme:"light"}); }
-  catch(e){ console.warn("turnstile",e); }
+  if(!TURNSTILE_SITE_KEY || !authShown || turnstileWidget!==null) return;
+  if(window.turnstile && window.turnstile.render){
+    try{ turnstileWidget=window.turnstile.render("#turnstile",{sitekey:TURNSTILE_SITE_KEY,
+      callback:t=>captchaToken=t, "expired-callback":()=>captchaToken=null, theme:"light"}); }
+    catch(e){ console.warn("turnstile",e); }
+  } else {
+    setTimeout(renderTurnstile,200);   // attend que le script Cloudflare soit chargé
+  }
 }
-window.onTurnstileReady=function(){ turnstileReady=true; renderTurnstile(); };
 function showApp(){
   document.getElementById("authOverlay").style.display="none"; document.body.style.overflow="";
   const pm=document.getElementById("profileMenu");
