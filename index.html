@@ -283,7 +283,9 @@
   .muted{color:var(--muted)}
   .profile{position:relative;margin-left:8px;flex:none}
   .profile-btn{width:36px;height:36px;border-radius:50%;border:1px solid var(--glass-border);cursor:pointer;display:grid;place-items:center;
-    background:radial-gradient(circle at 35% 30%,#ffc46b,#ec7a2c 65%,#b5471a);color:#fff;font-weight:800;font-size:15px;font-family:var(--font-display);box-shadow:var(--shadow-sm)}
+    background:linear-gradient(160deg,rgba(255,253,248,.7),rgba(255,243,229,.5));backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);
+    color:var(--primary-deep);font-weight:800;font-size:15px;font-family:var(--font-display);box-shadow:var(--sheen),var(--shadow-sm)}
+  .profile-btn:hover{background:linear-gradient(160deg,#fff,rgba(255,243,229,.7))}
   .profile-dropdown{position:absolute;right:0;top:44px;min-width:214px;padding:8px;display:none;z-index:50;border-radius:18px;
     background:linear-gradient(160deg,rgba(255,250,242,.82),rgba(255,242,228,.72));
     backdrop-filter:blur(20px) saturate(1.6);-webkit-backdrop-filter:blur(20px) saturate(1.6);
