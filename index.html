@@ -230,19 +230,19 @@
     #accountList .fx-amts, #creditList .fx-amts{gap:6px}
     #accountList .name-in, #creditList .name-in{min-width:0;font-size:13px}
   }
-  #fixedList .lrow, #incomeList .lrow, #saveList .lrow{padding-top:22px}
+  #fixedList .lrow, #incomeList .lrow, #saveList .lrow, #repayList .lrow{padding-top:22px}
   @media(max-width:859px){
-    #fixedList .lrow, #incomeList .lrow, #saveList .lrow{
+    #fixedList .lrow, #incomeList .lrow, #saveList .lrow, #repayList .lrow{
       display:grid; grid-template-columns:auto 1fr auto;
       grid-template-areas:"chk name del" "chk amt del";
       align-items:center; column-gap:10px; row-gap:8px; padding-top:12px;
     }
-    #fixedList .chk, #incomeList .chk, #saveList .chk{grid-area:chk;align-self:start;margin-top:8px}
-    #fixedList .del, #incomeList .del, #saveList .del{grid-area:del;align-self:start;margin-top:8px}
-    #fixedList .name-in, #incomeList .name-in, #saveList .name-in, #saveList .lname{grid-area:name;min-width:0;font-size:13px}
-    #fixedList .fx-amts, #incomeList .fx-amts, #saveList .fx-amts{grid-area:amt;margin-left:0;justify-self:start}
-    #fixedList .fx-amts > div, #incomeList .fx-amts > div, #saveList .fx-amts > div{flex-direction:row;align-items:center;gap:8px}
-    #fixedList .amt-lbl, #incomeList .amt-lbl, #saveList .amt-lbl{position:static;width:auto;text-align:left;margin:0}
+    #fixedList .chk, #incomeList .chk, #saveList .chk, #repayList .chk{grid-area:chk;align-self:start;margin-top:8px}
+    #fixedList .del, #incomeList .del, #saveList .del, #repayList .del{grid-area:del;align-self:start;margin-top:8px}
+    #fixedList .name-in, #incomeList .name-in, #saveList .name-in, #saveList .lname, #repayList .lname{grid-area:name;min-width:0;font-size:13px}
+    #fixedList .fx-amts, #incomeList .fx-amts, #saveList .fx-amts, #repayList .fx-amts{grid-area:amt;margin-left:0;justify-self:start}
+    #fixedList .fx-amts > div, #incomeList .fx-amts > div, #saveList .fx-amts > div, #repayList .fx-amts > div{flex-direction:row;align-items:center;gap:8px}
+    #fixedList .amt-lbl, #incomeList .amt-lbl, #saveList .amt-lbl, #repayList .amt-lbl{position:static;width:auto;text-align:left;margin:0}
   }
   .mini-btn{margin-top:6px;background:var(--card2);border:1px solid var(--line);color:var(--primary-deep);font-weight:700;font-size:11.5px;padding:5px 11px;border-radius:10px;cursor:pointer}
   .mini-btn:hover{background:#fff}
@@ -488,13 +488,17 @@
       <div class="toolbar"><button class="btn ghost sm" onclick="addAccount('epargne')">+ Ajouter un compte</button></div>
       <div class="card" id="accountList"></div>
 
+      <div class="section-h"><h3>Versements du mois</h3><span class="muted" id="saveSum" style="font-size:13px;font-weight:600"></span></div>
+      <div class="toolbar"><button class="btn ghost sm" onclick="openAdd('save')">+ Ajouter un versement</button></div>
+      <div class="card" id="saveList"></div>
+
       <div class="section-h"><h3>Crédits</h3></div>
       <div class="toolbar"><button class="btn ghost sm" onclick="addAccount('credit')">+ Ajouter un crédit</button></div>
       <div class="card" id="creditList"></div>
 
-      <div class="section-h"><h3>Versements du mois</h3><span class="muted" id="saveSum" style="font-size:13px;font-weight:600"></span></div>
-      <div class="toolbar"><button class="btn ghost sm" onclick="openAdd('save')">+ Ajouter un versement</button></div>
-      <div class="card" id="saveList"></div>
+      <div class="section-h"><h3>Remboursements du mois</h3><span class="muted" id="repaySum" style="font-size:13px;font-weight:600"></span></div>
+      <div class="toolbar"><button class="btn ghost sm" onclick="openAdd('repay')">+ Ajouter un remboursement</button></div>
+      <div class="card" id="repayList"></div>
     </section>
 
     <!-- BUDGETS -->
@@ -710,7 +714,7 @@ function seedJuly(){
 }
 function emptyMonth(){
   const b={}; CATS.forEach(c=>b[c.id]=0);
-  return {startBalance:0, income:[], fixed:[], savings:[], budgets:b, tx:[]};
+  return {startBalance:0, income:[], fixed:[], savings:[], credits:[], budgets:b, tx:[]};
 }
 
 /* ============ STORAGE ============ */
@@ -735,6 +739,13 @@ function migrate(){
       if(inc.actual===undefined)  inc.actual  = (+inc.amount||0);
       if(inc.received===undefined) inc.received = true;
       if("amount" in inc) delete inc.amount;
+    });
+    if(!mo.credits) mo.credits=[];
+    (mo.credits||[]).forEach(c=>{
+      if(c.planned===undefined) c.planned=(+c.amount||0);
+      if(c.actual===undefined)  c.actual =(+c.amount||0);
+      if(c.creditedAmount===undefined) c.creditedAmount = c.done ? (+c.actual||0) : 0;
+      if("amount" in c) delete c.amount;
     });
     if(mo.income && !mo.income.some(x=>x.report) && (+mo.startBalance||0)!==0){
       const sb=+mo.startBalance||0;
@@ -868,10 +879,12 @@ function realIncome(){ return M().income.reduce((a,i)=>a+(i.received?(+i.actual|
 function plannedIncome(){ return sum(M().income,"planned"); }
 function spentByCat(){ const o={}; CATS.forEach(c=>o[c.id]=0); M().tx.forEach(t=>{o[t.cat]=(o[t.cat]||0)+(+t.amount||0)}); return o; }
 function totalVar(){ return M().tx.reduce((a,t)=>a+(+t.amount||0),0); }
-function leftToSpend(){ return M().startBalance + realIncome() - actualFixed() - totalVar() - actualSavings(); }
+function leftToSpend(){ return M().startBalance + realIncome() - actualFixed() - totalVar() - actualSavings() - actualRepay(); }
 function budgetTotal(){ return Object.values(M().budgets).reduce((a,b)=>a+(+b||0),0); }
 function plannedSavings(){ return sum(M().savings,"planned"); }
-function forecastLeft(){ return M().startBalance + plannedIncome() - plannedFixed() - budgetTotal() - plannedSavings(); }
+function actualRepay(){ return (M().credits||[]).reduce((a,c)=>a+(c.done?(+c.actual||0):0),0); }
+function plannedRepay(){ return (M().credits||[]).reduce((a,c)=>a+(+c.planned||0),0); }
+function forecastLeft(){ return M().startBalance + plannedIncome() - plannedFixed() - budgetTotal() - plannedSavings() - plannedRepay(); }
 function realOutflow(){ return actualFixed() + totalVar() + actualSavings(); }
 function daysInfo(){
   const [y,m]=store.current.split("-").map(Number);
@@ -887,7 +900,8 @@ function monthLeftFor(mo){
   const aFix=(mo.fixed||[]).reduce((a,f)=>a+(f.paid?(+f.actual||0):0),0);
   const tVar=(mo.tx||[]).reduce((a,t)=>a+(+t.amount||0),0);
   const aSav=(mo.savings||[]).reduce((a,s)=>a+(s.done?(+s.actual||0):0),0);
-  return (+mo.startBalance||0)+rInc-aFix-tVar-aSav;
+  const aRep=(mo.credits||[]).reduce((a,c)=>a+(c.done?(+c.actual||0):0),0);
+  return (+mo.startBalance||0)+rInc-aFix-tVar-aSav-aRep;
 }
 const cap = s => s.charAt(0).toUpperCase()+s.slice(1);
 function monthName(key){ const [y,m]=key.split("-").map(Number);
@@ -941,7 +955,7 @@ function render(){
   document.getElementById("sSave").textContent=fmt(actualSavings());
 
   renderDonut(); renderCatProgress(); renderRecent();
-  renderTx(); renderFixed(); renderIncome(); renderAccounts(); renderSave(); renderBudget(); renderBase();
+  renderTx(); renderFixed(); renderIncome(); renderAccounts(); renderSave(); renderRepay(); renderBudget(); renderBase();
   save();
 }
 
@@ -1134,6 +1148,31 @@ function renderSave(){
 }
 window.toggleSave=i=>{ const s=M().savings[i]; s.done=!s.done; if(s.done) s.actual=s.planned; applyCredit(s); render(); };
 window.setSaving=(i,field,v)=>{ const s=M().savings[i]; s[field]=+v||0; applyCredit(s); render(); };
+
+function applyRepay(c){
+  const want = c.done ? (+c.actual||0) : 0;
+  const acc = findAcc(c.accountId);
+  if(acc) acc.balance = (+acc.balance||0) - (want - (+c.creditedAmount||0));  // rembourser réduit le restant dû
+  c.creditedAmount = want;
+}
+function renderRepay(){
+  const el=document.getElementById("repayList"); if(!el) return;
+  document.getElementById("repaySum").innerHTML=`Remboursé ${fmt(actualRepay())} / prévu ${fmt(plannedRepay())}`;
+  const s=M().credits||[];
+  el.innerHTML = s.length ? s.map((x,i)=>{
+    const acc=findAcc(x.accountId); const nm=acc?acc.name:(x.name||"—");
+    return `<div class="lrow">
+      <div class="chk ${x.done?'on':''}" onclick="toggleRepay(${i})" title="Cocher = rembourser sur le crédit">✓</div>
+      <div class="lname" style="flex:1;min-width:60px">${escapeHtml(nm)}${acc?'':' <small class="muted">(crédit supprimé)</small>'}</div>
+      <div class="fx-amts">
+        <div><span class="amt-lbl" style="color:${x.done?'var(--green)':'var(--muted)'}">${x.done?'Remboursé':'Prévu'}</span>
+          <input class="amt-in" type="number" step="0.01" inputmode="decimal" value="${x.done?x.actual:x.planned}" data-kind="repay" data-i="${i}" data-field="${x.done?'actual':'planned'}"></div>
+      </div>
+      <button class="del" onclick="delItem('credits',${i})">${TRASH}</button>
+    </div>`;
+  }).join("") : '<div class="empty">Aucun remboursement ce mois.</div>';
+}
+window.toggleRepay=i=>{ const c=M().credits[i]; c.done=!c.done; if(c.done) c.actual=c.planned; applyRepay(c); render(); };
 window.setAccountGoal=(id,v)=>{ const a=findAcc(id); if(a){ a.goal=+v||0; save(); renderAccounts(); } };
 
 /* comptes d'épargne */
@@ -1167,7 +1206,7 @@ window.delAccount=id=>{
   const a=findAcc(id); if(!a) return;
   confirmDialog("Supprimer le compte « "+a.name+" » ? Son solde suivi et ses versements associés seront supprimés.",()=>{
     store.accounts=store.accounts.filter(x=>x.id!==id);
-    Object.values(store.months||{}).forEach(mo=>{ if(mo.savings) mo.savings=mo.savings.filter(s=>s.accountId!==id); });
+    Object.values(store.months||{}).forEach(mo=>{ if(mo.savings) mo.savings=mo.savings.filter(s=>s.accountId!==id); if(mo.credits) mo.credits=mo.credits.filter(c=>c.accountId!==id); });
     if(store.template && store.template.savings) store.template.savings=store.template.savings.filter(s=>s.accountId!==id);
     render(); toast("Compte supprimé");
   });
@@ -1228,9 +1267,10 @@ window.addBase=(type)=> openAdd(type==="income"?"bincome":"bfixed");
 window.delBase=(type,i)=>{ confirmDialog("Retirer cet élément de la base ?",()=>{ T()[type].splice(i,1); save(); render(); toast("Retiré de la base"); }); };
 
 window.delItem=(type,i)=>{
-  const names={fixed:"cette charge fixe",income:"ce revenu",savings:"ce versement"};
+  const names={fixed:"cette charge fixe",income:"ce revenu",savings:"ce versement",credits:"ce remboursement"};
   confirmDialog("Supprimer "+names[type]+" ?",()=>{
     if(type==="savings"){ const s=M().savings[i]; if(s){ s.done=false; applyCredit(s); } }
+    if(type==="credits"){ const c=M().credits[i]; if(c){ c.done=false; applyRepay(c); } }
     M()[type].splice(i,1); render(); toast("Supprimé");
   });
 };
@@ -1290,6 +1330,15 @@ function openAdd(type,editIdx){
         <select id="mAcc">${accs.map(a=>`<option value="${a.id}">${escapeHtml(a.name)}</option>`).join("")}</select></div>
       <div class="field"><label class="f">Montant (€)</label><input id="mAmt" type="number" step="0.01" inputmode="decimal" placeholder="0,00"></div>
       <button class="btn" onclick="saveLine('save')">Ajouter</button>`;
+  } else if(type==="repay"){
+    const accs=(store.accounts||[]).filter(a=>a.type==="credit");
+    if(!accs.length){ toast("Ajoute d'abord un crédit",true); addAccount("credit"); return; }
+    html=`<button class="mclose" onclick="closeModal()">✕</button>
+      <h3>Nouveau remboursement</h3><p class="sub">Mensualité prévue ce mois sur un crédit.</p>
+      <div class="field"><label class="f">Crédit</label>
+        <select id="mAcc">${accs.map(a=>`<option value="${a.id}">${escapeHtml(a.name)}</option>`).join("")}</select></div>
+      <div class="field"><label class="f">Montant (€)</label><input id="mAmt" type="number" step="0.01" inputmode="decimal" placeholder="0,00"></div>
+      <button class="btn" onclick="saveLine('repay')">Ajouter</button>`;
   } else {
     const titles={fixed:"charge fixe",income:"revenu",bfixed:"charge fixe (base)",bincome:"revenu (base)"};
     const isFixedLike = (type==="fixed"||type==="bfixed");
@@ -1308,7 +1357,7 @@ function openAdd(type,editIdx){
     document.getElementById("mDate").value = ed ? ed.date : new Date().toISOString().slice(0,10);
     if(ed){ document.getElementById("mAmt").value=ed.amount; document.getElementById("mNote").value=ed.note||""; }
     renderModalCats(); setTimeout(()=>document.getElementById("mAmt").focus(),100);
-  } else if(type==="save"){ setTimeout(()=>document.getElementById("mAmt").focus(),100); }
+  } else if(type==="save"||type==="repay"){ setTimeout(()=>document.getElementById("mAmt").focus(),100); }
   else setTimeout(()=>document.getElementById("mName").focus(),100);
   document.getElementById("modalBg").classList.add("on"); document.body.style.overflow="hidden";
 }
@@ -1339,6 +1388,15 @@ window.saveLine=(type)=>{
     const acc=findAcc(accId);
     M().savings.push({accountId:accId, name:acc?acc.name:"", planned:amt, actual:amt, done:false, creditedAmount:0});
     closeModal(); render(); toast("Versement ajouté ✓"); return;
+  }
+  if(type==="repay"){
+    const accId=document.getElementById("mAcc").value;
+    const amt=parseFloat(document.getElementById("mAmt").value);
+    if(isNaN(amt)||amt<0){toast("Montant invalide",true);return;}
+    const acc=findAcc(accId);
+    if(!M().credits) M().credits=[];
+    M().credits.push({accountId:accId, name:acc?acc.name:"", planned:amt, actual:amt, done:false, creditedAmount:0});
+    closeModal(); render(); toast("Remboursement ajouté ✓"); return;
   }
   const name=document.getElementById("mName").value.trim();
   const amt=parseFloat(document.getElementById("mAmt").value);
@@ -1544,6 +1602,7 @@ function commitInputs(scope){
     if(k.kind==="fixed") M().fixed[+k.i][k.field]=v;
     else if(k.kind==="income") M().income[+k.i][k.field]=v;
     else if(k.kind==="saving"){ const s=M().savings[+k.i]; s[k.field]=v; applyCredit(s); }
+    else if(k.kind==="repay"){ const c=M().credits[+k.i]; c[k.field]=v; applyRepay(c); }
     else if(k.kind==="budget") M().budgets[k.catid]=v;
     else if(k.kind==="accbal"){ const a=findAcc(k.id); if(a) a.balance=v; }
     else if(k.kind==="accgoal"){ const a=findAcc(k.id); if(a) a.goal=v; }
@@ -1563,6 +1622,7 @@ function revertInputs(scope){
     if(k.kind==="fixed") v=M().fixed[+k.i][k.field];
     else if(k.kind==="income") v=M().income[+k.i][k.field];
     else if(k.kind==="saving") v=M().savings[+k.i][k.field];
+    else if(k.kind==="repay") v=M().credits[+k.i][k.field];
     else if(k.kind==="budget") v=M().budgets[k.catid];
     else if(k.kind==="accbal"){ const a=findAcc(k.id); v=a?a.balance:0; }
     else if(k.kind==="accgoal"){ const a=findAcc(k.id); v=a?a.goal:0; }
