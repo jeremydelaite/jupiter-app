@@ -627,6 +627,7 @@ const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 const TURNSTILE_SITE_KEY = "0x4AAAAAAD6tnrhvgBARHF2v";
 const MIN_PW = 8; // longueur minimale du mot de passe
 let sb=null, currentUser=null, syncTimer=null, captchaToken=null, turnstileWidget=null;
+let cloudLoaded=false, lastPull=0;
 let turnstileReady=false, authShown=false;
 
 /* ============ DATA MODEL ============ */
@@ -790,7 +791,7 @@ function migrate(){
     store.template.income.forEach(x=>{ if(x.planned===undefined) x.planned=(+x.amount||0); if("amount" in x) delete x.amount; });
 }
 function save(){ localStorage.setItem(LS_KEY, JSON.stringify(store));
-  if(sb && currentUser){ clearTimeout(syncTimer); syncTimer=setTimeout(pushCloud,900); } }
+  if(sb && currentUser && cloudLoaded){ clearTimeout(syncTimer); syncTimer=setTimeout(()=>{ syncTimer=null; pushCloud(); },900); } }
 function ensureMonth(key){
   if(!store.months[key]){ store.months[key]=emptyMonth(); }
   ensureReport(key);
@@ -1469,8 +1470,9 @@ async function pullCloud(){
   try{
     const {data,error}=await sb.from('jupiter_data').select('data').eq('user_id',currentUser.id).maybeSingle();
     if(error) throw error;
-    if(data && data.data){ store=data.data; migrate(); localStorage.setItem(LS_KEY,JSON.stringify(store)); }
-    else { await pushCloud(); }   // 1ère connexion : on envoie les données locales actuelles
+    if(data && data.data){ store=data.data; migrate(); localStorage.setItem(LS_KEY,JSON.stringify(store)); cloudLoaded=true; }
+    else { cloudLoaded=true; await pushCloud(); }   // 1ère connexion : on envoie les données locales actuelles
+    lastPull=Date.now();
   }catch(e){ console.warn("pull",e); toast("Synchro indisponible, mode local",true); }
 }
 async function pushCloud(){
@@ -1586,6 +1588,14 @@ async function boot(){
   }
 }
 boot();
+
+/* Rafraîchit depuis le cloud quand on revient sur l'app (sync multi-appareils),
+   uniquement s'il n'y a pas de modif locale en attente d'envoi. */
+document.addEventListener("visibilitychange",()=>{
+  if(document.visibilityState==="visible" && sb && currentUser && cloudLoaded && !syncTimer && (Date.now()-lastPull>8000)){
+    pullCloud().then(()=>render());
+  }
+});
 
 /* Service worker : app installable + hors-ligne */
 if("serviceWorker" in navigator){
