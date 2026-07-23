@@ -543,6 +543,12 @@
       </div>
 
       <button class="btn ghost" style="margin-top:16px" onclick="signOut()"><i class="bic" data-ic="logout"></i>Se déconnecter</button>
+
+      <div class="section-h"><h3>Zone dangereuse</h3></div>
+      <div class="card">
+        <p class="sub" style="margin:0 0 12px">Supprime définitivement ton compte et toutes tes données (revenus, charges, épargne, historique). Cette action est irréversible.</p>
+        <button class="btn danger" onclick="deleteAccount()">Supprimer mon compte</button>
+      </div>
     </section>
 
     <!-- DÉFINIR LA BASE -->
@@ -1391,7 +1397,11 @@ function injectIcons(){ document.querySelectorAll("[data-ic]").forEach(el=>{ el.
 
 /* ============ AUTH & SYNC SUPABASE ============ */
 function initSupabase(){
-  try{ if(/^https:\/\//.test(SUPABASE_URL) && window.supabase){ sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY); } }catch(e){}
+  try{ if(/^https:\/\//.test(SUPABASE_URL) && window.supabase){
+    sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY,{
+      auth:{ persistSession:true, autoRefreshToken:true, detectSessionInUrl:false, storage:window.localStorage }
+    });
+  } }catch(e){}
   return !!sb;
 }
 async function pullCloud(){
@@ -1478,6 +1488,19 @@ window.changePassword=async()=>{
     toast("Mot de passe mis à jour ✓");
   }catch(e){ err.style.color="var(--red)"; err.textContent=e.message||"Erreur lors de la mise à jour."; }
   finally{ if(btn) btn.disabled=false; }
+};
+window.deleteAccount=()=>{
+  confirmDialog("Supprimer DÉFINITIVEMENT ton compte et toutes tes données ? Cette action est irréversible.", async()=>{
+    if(!sb || !currentUser){ toast("Non connecté",true); return; }
+    try{
+      const {error}=await sb.rpc('delete_account');
+      if(error) throw error;
+      try{ localStorage.removeItem(LS_KEY); }catch(e){}
+      try{ await sb.auth.signOut(); }catch(e){}
+      toast("Compte supprimé");
+      setTimeout(()=>location.reload(),700);
+    }catch(e){ toast(e.message||"Erreur lors de la suppression",true); }
+  }, "Supprimer définitivement", true);
 };
 window.signOut=async()=>{
   confirmDialog("Se déconnecter ? Tes données restent enregistrées dans le cloud.",async()=>{
