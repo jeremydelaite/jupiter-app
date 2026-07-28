@@ -146,7 +146,7 @@
   .hero::before{content:"";position:absolute;left:-50px;bottom:-90px;width:220px;height:220px;border-radius:50%;
     background:radial-gradient(circle,rgba(255,255,255,.18),transparent 70%)}
   .hero .lbl{color:rgba(255,255,255,.85);font-size:12.5px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;position:relative}
-  .hero .amount{font-size:46px;font-weight:800;margin:6px 0 2px;letter-spacing:-1.5px;position:relative;text-shadow:0 2px 12px rgba(120,50,10,.25)}
+  .hero .amount{font-size:46px;font-weight:800;margin:6px 0 2px;letter-spacing:-1.5px;position:relative;text-shadow:0 2px 12px rgba(120,50,10,.25);white-space:nowrap;overflow:hidden}
   .hero .amount.neg{color:#fff2ec}
   .hero .days{color:rgba(255,255,255,.9);font-size:13px;position:relative}
   .progress{height:10px;border-radius:8px;background:rgba(255,255,255,.28);overflow:hidden;margin-top:16px;position:relative}
@@ -290,6 +290,11 @@
   .subtabs a.active{background:linear-gradient(120deg,var(--primary),var(--primary2));color:#fff;box-shadow:0 4px 12px var(--glow)}
   @media(max-width:859px){.subtabs{display:flex}}
   .subtabs.base-subtabs{display:flex}
+  .comp-year{display:flex;align-items:center;justify-content:center;gap:2px;margin:0 auto 14px;width:max-content;border-radius:14px;overflow:hidden;
+    background:linear-gradient(160deg,rgba(255,253,248,.7),rgba(255,243,229,.5));border:1px solid var(--glass-border);box-shadow:var(--sheen),var(--shadow-sm)}
+  .comp-year button{background:none;border:0;color:var(--primary-deep);width:40px;height:40px;font-size:18px;cursor:pointer}
+  .comp-year button:hover{background:rgba(236,122,44,.12)}
+  .comp-year span{font-weight:700;font-size:14px;min-width:118px;text-align:center;line-height:40px;border-left:1px solid var(--glass-border);border-right:1px solid var(--glass-border)}
   .tx-filter-sel{display:none;margin-bottom:16px;text-transform:capitalize;font-weight:600}
   .cat-sel{display:none;text-transform:capitalize;font-weight:600}
   @media(max-width:859px){#txFilter{display:none} .tx-filter-sel{display:block} #mCats{display:none} .cat-sel{display:block}}
@@ -612,17 +617,39 @@
     <section class="view" id="v-trends">
       <h2 class="title">Tendances</h2>
       <p class="sub">Évolution de tes dépenses, épargne et solde sur plusieurs mois.</p>
-      <div class="subtabs base-subtabs" id="trendPeriod">
-        <a data-per="6" class="active" onclick="setTrendPeriod(6)">6 mois</a>
-        <a data-per="12" onclick="setTrendPeriod(12)">12 mois</a>
-        <a data-per="0" onclick="setTrendPeriod(0)">Tout</a>
+      <div class="subtabs base-subtabs" id="trendMode">
+        <a data-mode="evo" class="active" onclick="setTrendMode('evo')">Évolution</a>
+        <a data-mode="comp" onclick="setTrendMode('comp')">Comparatif</a>
       </div>
-      <div class="card">
-        <canvas id="trendChart" style="width:100%;display:block"></canvas>
-        <div class="legend" id="trendLegend" style="margin-top:14px;flex-direction:row;flex-wrap:wrap;gap:14px"></div>
+
+      <div id="evoBlock">
+        <div class="subtabs base-subtabs" id="trendPeriod">
+          <a data-per="3" onclick="setTrendPeriod(3)">3 mois</a>
+          <a data-per="6" class="active" onclick="setTrendPeriod(6)">6 mois</a>
+          <a data-per="12" onclick="setTrendPeriod(12)">12 mois</a>
+        </div>
+        <div class="card">
+          <canvas id="trendChart" style="width:100%;display:block"></canvas>
+          <div class="legend" id="trendLegend" style="margin-top:14px;flex-direction:row;flex-wrap:wrap;gap:14px"></div>
+        </div>
+        <div class="section-h"><h3>Résumé de la période</h3></div>
+        <div class="card" id="trendStats"></div>
       </div>
-      <div class="section-h"><h3>Résumé de la période</h3></div>
-      <div class="card" id="trendStats"></div>
+
+      <div id="compBlock" style="display:none">
+        <div class="subtabs base-subtabs" id="compMetric">
+          <a data-m="dep" class="active" onclick="setCompMetric('dep')">Dépenses</a>
+          <a data-m="sav" onclick="setCompMetric('sav')">Épargne</a>
+          <a data-m="solde" onclick="setCompMetric('solde')">Solde</a>
+        </div>
+        <div class="comp-year"><button onclick="compYearShift(-1)">‹</button><span id="compYearLbl"></span><button onclick="compYearShift(1)">›</button></div>
+        <div class="card">
+          <canvas id="compChart" style="width:100%;display:block"></canvas>
+          <div class="legend" id="compLegend" style="margin-top:14px;flex-direction:row;flex-wrap:wrap;gap:14px"></div>
+        </div>
+        <div class="section-h"><h3>Comparaison</h3></div>
+        <div class="card" id="compStats"></div>
+      </div>
     </section>
   </main>
 </div>
@@ -939,6 +966,10 @@ function maybePromptBase(){
 
 /* ============ HELPERS ============ */
 const fmt = n => "€"+ (Math.round(n*100)/100).toLocaleString("fr-FR",{minimumFractionDigits:2,maximumFractionDigits:2});
+const MAXV = 999999999; // plafond des montants (< 1 milliard)
+function fitHero(){ const la=document.getElementById("leftAmt"); if(!la||!la.clientWidth) return;
+  let fs=46; la.style.fontSize=fs+"px"; let g=0;
+  while(la.scrollWidth>la.clientWidth && fs>18 && g<30){ fs-=2; la.style.fontSize=fs+"px"; g++; } }
 const sum = (arr,key) => arr.reduce((a,x)=>a+(+x[key]||0),0);
 
 function actualFixed(){ return M().fixed.reduce((a,f)=>a+(f.paid?(+f.actual||0):0),0); }
@@ -1017,6 +1048,7 @@ function render(){
   const la=document.getElementById("leftAmt");
   la.textContent=fmt(left);
   la.className="amount "+(left<0?"neg":"pos");
+  fitHero();
   const d=daysInfo();
   const perDay = d.remaining>0 ? forecastLeft()/d.remaining : 0;
   document.getElementById("daysLeft").textContent =
@@ -1381,29 +1413,35 @@ function trendMetric(key){
   const solde=mo?monthLeftFor(mo):0;
   return {dep,sav,solde};
 }
-function renderTrends(){
-  const c=document.getElementById("trendChart"); if(!c || !c.clientWidth) return;
-  const keys=trendMonthKeys(); const met=keys.map(trendMetric);
-  const series=[
-    {name:"Dépenses",color:"#f2a63a",vals:met.map(x=>x.dep)},
-    {name:"Épargne",color:"#2fa79c",vals:met.map(x=>x.sav)},
-    {name:"Solde réel",color:"#c85a1c",vals:met.map(x=>x.solde)},
-  ];
+const MONTHS12=["janv","févr","mars","avr","mai","juin","juil","août","sept","oct","nov","déc"];
+let trendMode="evo", compMetric="dep", compYear=null;
+function drawLineChart(canvasId, labels, series){
+  const c=document.getElementById(canvasId); if(!c || !c.clientWidth) return false;
   const cssW=c.clientWidth, cssH=210, dpr=window.devicePixelRatio||1;
   c.width=cssW*dpr; c.height=cssH*dpr; c.style.height=cssH+"px";
   const ctx=c.getContext("2d"); ctx.setTransform(dpr,0,0,dpr,0,0); ctx.clearRect(0,0,cssW,cssH);
   const padL=8,padR=8,padT=12,padB=26, W=cssW-padL-padR, H=cssH-padT-padB;
   const all=series.flatMap(s=>s.vals); let mn=Math.min(0,...all), mx=Math.max(0,...all); if(mx===mn) mx=mn+1;
-  const X=i=> keys.length<=1?padL+W/2 : padL+i*(W/(keys.length-1));
+  const X=i=> labels.length<=1?padL+W/2 : padL+i*(W/(labels.length-1));
   const Y=v=> padT+H-((v-mn)/(mx-mn))*H;
   ctx.strokeStyle="#e6d6bd"; ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(padL,Y(0)); ctx.lineTo(cssW-padR,Y(0)); ctx.stroke();
   series.forEach(s=>{ ctx.strokeStyle=s.color; ctx.lineWidth=2.5; ctx.lineJoin="round"; ctx.beginPath();
     s.vals.forEach((v,i)=>{ const xx=X(i),yy=Y(v); i?ctx.lineTo(xx,yy):ctx.moveTo(xx,yy); }); ctx.stroke();
     ctx.fillStyle=s.color; s.vals.forEach((v,i)=>{ ctx.beginPath(); ctx.arc(X(i),Y(v),2.6,0,7); ctx.fill(); }); });
   ctx.fillStyle="#9c8a74"; ctx.font="600 11px -apple-system,sans-serif"; ctx.textAlign="center";
-  const step=Math.max(1,Math.ceil(keys.length/6));
-  keys.forEach((k,i)=>{ if(keys.length>7 && (i%step!==0) && i!==keys.length-1) return;
-    const lbl=new Date(k+"-01").toLocaleDateString("fr-FR",{month:"short"}).replace(".",""); ctx.fillText(lbl, X(i), cssH-8); });
+  const step=Math.max(1,Math.ceil(labels.length/6));
+  labels.forEach((lbl,i)=>{ if(labels.length>7 && (i%step!==0) && i!==labels.length-1) return; ctx.fillText(lbl, X(i), cssH-8); });
+  return true;
+}
+function renderEvo(){
+  const keys=trendMonthKeys(); const met=keys.map(trendMetric);
+  const labels=keys.map(k=>new Date(k+"-01").toLocaleDateString("fr-FR",{month:"short"}).replace(".",""));
+  const series=[
+    {name:"Dépenses",color:"#f2a63a",vals:met.map(x=>x.dep)},
+    {name:"Épargne",color:"#2fa79c",vals:met.map(x=>x.sav)},
+    {name:"Solde réel",color:"#c85a1c",vals:met.map(x=>x.solde)},
+  ];
+  if(!drawLineChart("trendChart",labels,series)) return;
   document.getElementById("trendLegend").innerHTML=series.map(s=>`<div class="li"><span class="sw" style="background:${s.color}"></span>${s.name}</div>`).join("");
   const n=keys.length, totDep=met.reduce((a,x)=>a+x.dep,0), totSav=met.reduce((a,x)=>a+x.sav,0);
   document.getElementById("trendStats").innerHTML=
@@ -1411,8 +1449,32 @@ function renderTrends(){
     `<div class="lrow"><div class="lname" style="flex:1">Épargne totale (période)</div><div class="lamt" style="color:var(--teal)">${fmt(totSav)}</div></div>`+
     `<div class="lrow"><div class="lname" style="flex:1">Solde réel actuel</div><div class="lamt">${fmt(met[met.length-1].solde)}</div></div>`;
 }
-window.setTrendPeriod=(n)=>{ trendPeriod=n; document.querySelectorAll("#trendPeriod [data-per]").forEach(b=>b.classList.toggle("active",+b.dataset.per===n)); renderTrends(); };
-window.openTrends=()=>{ const d=document.getElementById("profileDropdown"); if(d) d.classList.remove("open"); go("trends"); setTrendPeriod(trendPeriod); };
+function renderComp(){
+  if(!compYear) compYear=+store.current.split("-")[0];
+  const Y=compYear, Yp=Y-1;
+  const lbl=document.getElementById("compYearLbl"); if(lbl) lbl.textContent=Y+" vs "+Yp;
+  const cur=[],prev=[];
+  for(let mm=1;mm<=12;mm++){ const s=String(mm).padStart(2,"0"); cur.push(trendMetric(Y+"-"+s)[compMetric]); prev.push(trendMetric(Yp+"-"+s)[compMetric]); }
+  if(!drawLineChart("compChart",MONTHS12,[{name:""+Y,color:"#ec7a2c",vals:cur},{name:""+Yp,color:"#2fa79c",vals:prev}])) return;
+  const metName={dep:"Dépenses",sav:"Épargne",solde:"Solde réel"}[compMetric];
+  document.getElementById("compLegend").innerHTML=`<div class="li"><span class="sw" style="background:#ec7a2c"></span>${Y}</div><div class="li"><span class="sw" style="background:#2fa79c"></span>${Yp}</div><div class="li muted">${metName}</div>`;
+  const tc=cur.reduce((a,b)=>a+b,0), tp=prev.reduce((a,b)=>a+b,0), diff=tc-tp;
+  const pct= tp!==0 ? (diff/Math.abs(tp)*100) : 0;
+  const bad = compMetric==="dep" ? diff>0 : diff<0;
+  document.getElementById("compStats").innerHTML=
+    `<div class="lrow"><div class="lname" style="flex:1">Total ${Y}</div><div class="lamt">${fmt(tc)}</div></div>`+
+    `<div class="lrow"><div class="lname" style="flex:1">Total ${Yp}</div><div class="lamt">${fmt(tp)}</div></div>`+
+    `<div class="lrow"><div class="lname" style="flex:1">Écart</div><div class="lamt" style="color:${bad?'var(--red)':'var(--green)'}">${diff>=0?'+':''}${fmt(diff)}${tp!==0?' ('+(diff>=0?'+':'')+pct.toFixed(0)+'%)':''}</div></div>`;
+}
+function renderTrends(){ renderEvo(); renderComp(); }
+window.setTrendPeriod=(n)=>{ trendPeriod=n; document.querySelectorAll("#trendPeriod [data-per]").forEach(b=>b.classList.toggle("active",+b.dataset.per===n)); renderEvo(); };
+window.setCompMetric=(m)=>{ compMetric=m; document.querySelectorAll("#compMetric [data-m]").forEach(b=>b.classList.toggle("active",b.dataset.m===m)); renderComp(); };
+window.compYearShift=(d)=>{ if(!compYear) compYear=+store.current.split("-")[0]; compYear+=d; renderComp(); };
+window.setTrendMode=(m)=>{ trendMode=m; document.querySelectorAll("#trendMode [data-mode]").forEach(b=>b.classList.toggle("active",b.dataset.mode===m));
+  document.getElementById("evoBlock").style.display=m==="evo"?"block":"none";
+  document.getElementById("compBlock").style.display=m==="comp"?"block":"none";
+  renderTrends(); };
+window.openTrends=()=>{ const d=document.getElementById("profileDropdown"); if(d) d.classList.remove("open"); go("trends"); setTrendMode(trendMode); setTrendPeriod(trendPeriod); };
 
 /* ---- Catégories personnalisées ---- */
 let ncColor=CAT_COLORS[0], ncIcon="bag";
@@ -1521,6 +1583,7 @@ function go(view){
   document.querySelectorAll(".subtabs [data-sub]").forEach(b=>b.classList.toggle("active",b.dataset.sub===view));
   const fab=document.querySelector(".fab");
   if(fab) fab.style.display=(view==="dash"||view==="tx")?"grid":"none";
+  if(view==="dash") setTimeout(fitHero,0);
   window.scrollTo({top:0,behavior:"smooth"});
 }
 document.querySelectorAll("[data-nav]").forEach(a=>a.addEventListener("click",()=>go(a.dataset.nav)));
@@ -1851,6 +1914,8 @@ function layoutFab(){
 window.addEventListener("load",layoutFab);
 window.addEventListener("resize",layoutFab);
 window.addEventListener("resize",()=>renderTrends());
+/* Plafonne toute saisie numérique à moins d'un milliard */
+document.addEventListener("input",e=>{ const t=e.target; if(t && t.matches && t.matches('input[type=number]')){ const v=parseFloat(t.value); if(!isNaN(v) && v>MAXV) t.value=MAXV; } });
 layoutFab();
 
 /* Rafraîchit depuis le cloud quand on revient sur l'app (sync multi-appareils),
