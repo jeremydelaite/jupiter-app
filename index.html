@@ -405,6 +405,7 @@
       <button class="profile-btn" onclick="toggleProfileMenu(event)" aria-label="Mon compte"><span id="profileInitial">?</span></button>
       <div class="profile-dropdown" id="profileDropdown">
         <div class="pd-email" id="profileEmail"></div>
+        <a class="pd-item" onclick="openTrends()"><i class="pd-ic" data-ic="trend"></i> Tendances</a>
         <a class="pd-item" onclick="openAccount()"><i class="pd-ic" data-ic="account"></i> Mon compte</a>
         <a class="pd-item" onclick="openSetBase()"><i class="pd-ic" data-ic="savecheck"></i> Définir la base</a>
         <a class="pd-item danger" onclick="signOut()"><i class="pd-ic" data-ic="logout"></i> Déconnexion</a>
@@ -572,7 +573,6 @@
       <div class="card">
         <div class="soon-item">📤 Export / import de mes données <span class="badge-soon">À venir</span></div>
         <div class="soon-item">🔔 Rappels & notifications <span class="badge-soon">À venir</span></div>
-        <div class="soon-item">🏷️ Catégories personnalisées <span class="badge-soon">À venir</span></div>
         <div class="soon-item">💱 Devise & format <span class="badge-soon">À venir</span></div>
       </div>
 
@@ -606,6 +606,23 @@
         <div class="toolbar"><button class="btn ghost sm" onclick="addCategory()">+ Ajouter une catégorie</button></div>
         <div class="card" id="baseBudgetList"></div>
       </div>
+    </section>
+
+    <!-- TENDANCES -->
+    <section class="view" id="v-trends">
+      <h2 class="title">Tendances</h2>
+      <p class="sub">Évolution de tes dépenses, épargne et solde sur plusieurs mois.</p>
+      <div class="subtabs base-subtabs" id="trendPeriod">
+        <a data-per="6" class="active" onclick="setTrendPeriod(6)">6 mois</a>
+        <a data-per="12" onclick="setTrendPeriod(12)">12 mois</a>
+        <a data-per="0" onclick="setTrendPeriod(0)">Tout</a>
+      </div>
+      <div class="card">
+        <canvas id="trendChart" style="width:100%;display:block"></canvas>
+        <div class="legend" id="trendLegend" style="margin-top:14px;flex-direction:row;flex-wrap:wrap;gap:14px"></div>
+      </div>
+      <div class="section-h"><h3>Résumé de la période</h3></div>
+      <div class="card" id="trendStats"></div>
     </section>
   </main>
 </div>
@@ -1016,7 +1033,7 @@ function render(){
   document.getElementById("sSave").innerHTML=fmt(actualSavings())+` <small>/ ${fmt(plannedSavings())}</small>`;
 
   renderDonut(); renderBudgetDonut(); renderCatProgress(); renderRecent();
-  renderTx(); renderFixed(); renderIncome(); renderAccounts(); renderSave(); renderRepay(); renderBudget(); renderBase();
+  renderTx(); renderFixed(); renderIncome(); renderAccounts(); renderSave(); renderRepay(); renderBudget(); renderBase(); renderTrends();
   save();
 }
 
@@ -1342,6 +1359,61 @@ window.setBudget=(id,v)=>{ M().budgets[id]=+v||0; save();
   document.getElementById("sVar").innerHTML=fmt(totalVar())+` <small>/ ${fmt(budgetTotal())}</small>`; };
 window.alignBudget=id=>{ M().budgets[id]=spentByCat()[id]; render(); toast("Budget aligné ✓"); };
 
+/* ---- Vue Tendances ---- */
+let trendPeriod=6;
+function trendMonthKeys(){
+  let [y,m]=store.current.split("-").map(Number);
+  const keys=[];
+  if(trendPeriod===0){
+    const ex=Object.keys(store.months||{}).sort();
+    if(!ex.length) return [store.current];
+    let [sy,sm]=ex[0].split("-").map(Number); let g=0;
+    while((sy<y||(sy===y&&sm<=m)) && g<120){ keys.push(sy+"-"+String(sm).padStart(2,"0")); sm++; if(sm>12){sm=1;sy++;} g++; }
+  } else {
+    for(let i=trendPeriod-1;i>=0;i--){ const d=new Date(y,m-1-i,1); keys.push(d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")); }
+  }
+  return keys;
+}
+function trendMetric(key){
+  const mo=(store.months||{})[key];
+  const dep=mo?(mo.tx||[]).reduce((a,t)=>a+(+t.amount||0),0):0;
+  const sav=mo?(mo.savings||[]).reduce((a,s)=>a+(s.done?(+s.actual||0):0),0):0;
+  const solde=mo?monthLeftFor(mo):0;
+  return {dep,sav,solde};
+}
+function renderTrends(){
+  const c=document.getElementById("trendChart"); if(!c || !c.clientWidth) return;
+  const keys=trendMonthKeys(); const met=keys.map(trendMetric);
+  const series=[
+    {name:"Dépenses",color:"#f2a63a",vals:met.map(x=>x.dep)},
+    {name:"Épargne",color:"#2fa79c",vals:met.map(x=>x.sav)},
+    {name:"Solde réel",color:"#c85a1c",vals:met.map(x=>x.solde)},
+  ];
+  const cssW=c.clientWidth, cssH=210, dpr=window.devicePixelRatio||1;
+  c.width=cssW*dpr; c.height=cssH*dpr; c.style.height=cssH+"px";
+  const ctx=c.getContext("2d"); ctx.setTransform(dpr,0,0,dpr,0,0); ctx.clearRect(0,0,cssW,cssH);
+  const padL=8,padR=8,padT=12,padB=26, W=cssW-padL-padR, H=cssH-padT-padB;
+  const all=series.flatMap(s=>s.vals); let mn=Math.min(0,...all), mx=Math.max(0,...all); if(mx===mn) mx=mn+1;
+  const X=i=> keys.length<=1?padL+W/2 : padL+i*(W/(keys.length-1));
+  const Y=v=> padT+H-((v-mn)/(mx-mn))*H;
+  ctx.strokeStyle="#e6d6bd"; ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(padL,Y(0)); ctx.lineTo(cssW-padR,Y(0)); ctx.stroke();
+  series.forEach(s=>{ ctx.strokeStyle=s.color; ctx.lineWidth=2.5; ctx.lineJoin="round"; ctx.beginPath();
+    s.vals.forEach((v,i)=>{ const xx=X(i),yy=Y(v); i?ctx.lineTo(xx,yy):ctx.moveTo(xx,yy); }); ctx.stroke();
+    ctx.fillStyle=s.color; s.vals.forEach((v,i)=>{ ctx.beginPath(); ctx.arc(X(i),Y(v),2.6,0,7); ctx.fill(); }); });
+  ctx.fillStyle="#9c8a74"; ctx.font="600 11px -apple-system,sans-serif"; ctx.textAlign="center";
+  const step=Math.max(1,Math.ceil(keys.length/6));
+  keys.forEach((k,i)=>{ if(keys.length>7 && (i%step!==0) && i!==keys.length-1) return;
+    const lbl=new Date(k+"-01").toLocaleDateString("fr-FR",{month:"short"}).replace(".",""); ctx.fillText(lbl, X(i), cssH-8); });
+  document.getElementById("trendLegend").innerHTML=series.map(s=>`<div class="li"><span class="sw" style="background:${s.color}"></span>${s.name}</div>`).join("");
+  const n=keys.length, totDep=met.reduce((a,x)=>a+x.dep,0), totSav=met.reduce((a,x)=>a+x.sav,0);
+  document.getElementById("trendStats").innerHTML=
+    `<div class="lrow"><div class="lname" style="flex:1">Dépenses moyennes / mois</div><div class="lamt" style="color:var(--amber)">${fmt(totDep/n)}</div></div>`+
+    `<div class="lrow"><div class="lname" style="flex:1">Épargne totale (période)</div><div class="lamt" style="color:var(--teal)">${fmt(totSav)}</div></div>`+
+    `<div class="lrow"><div class="lname" style="flex:1">Solde réel actuel</div><div class="lamt">${fmt(met[met.length-1].solde)}</div></div>`;
+}
+window.setTrendPeriod=(n)=>{ trendPeriod=n; document.querySelectorAll("#trendPeriod [data-per]").forEach(b=>b.classList.toggle("active",+b.dataset.per===n)); renderTrends(); };
+window.openTrends=()=>{ const d=document.getElementById("profileDropdown"); if(d) d.classList.remove("open"); go("trends"); setTrendPeriod(trendPeriod); };
+
 /* ---- Catégories personnalisées ---- */
 let ncColor=CAT_COLORS[0], ncIcon="bag";
 window.addCategory=()=>{
@@ -1609,6 +1681,7 @@ const ICONS={
   download:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V3"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/></svg>`,
   target:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>`,
   bars:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v16a2 2 0 0 0 2 2h16"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></svg>`,
+  trend:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M16 7h6v6"/><path d="m22 7-8.5 8.5-5-5L2 17"/></svg>`,
   manage:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><line x1="21" x2="14" y1="4" y2="4"/><line x1="10" x2="3" y1="4" y2="4"/><line x1="21" x2="12" y1="12" y2="12"/><line x1="8" x2="3" y1="12" y2="12"/><line x1="21" x2="16" y1="20" y2="20"/><line x1="12" x2="3" y1="20" y2="20"/><line x1="14" x2="14" y1="2" y2="6"/><line x1="8" x2="8" y1="10" y2="14"/><line x1="16" x2="16" y1="18" y2="22"/></svg>`,
   account:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>`,
   logout:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg>`,
@@ -1777,6 +1850,7 @@ function layoutFab(){
 }
 window.addEventListener("load",layoutFab);
 window.addEventListener("resize",layoutFab);
+window.addEventListener("resize",()=>renderTrends());
 layoutFab();
 
 /* Rafraîchit depuis le cloud quand on revient sur l'app (sync multi-appareils),
