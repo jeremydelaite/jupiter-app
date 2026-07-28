@@ -8,14 +8,21 @@ Interface « liquid glass » moderne, responsive mobile + ordinateur. Aucune dé
 
 ## ✨ Fonctionnalités
 
-- **Tableau de bord** : solde réel disponible, restant prévu en fin de mois, répartition des dépenses, budgets par catégorie.
+- **Tableau de bord** : solde réel disponible, restant prévu en fin de mois avec jours restants et budget par jour, répartition des dépenses en camembert, budgets par catégorie.
 - **Suivi des dépenses** : ajout rapide, édition, regroupement par jour avec sous-totaux, filtre par catégorie.
 - **Charges fixes** : montant prévu qui devient réel une fois la charge cochée comme payée.
 - **Revenus** : prévu → reçu, avec report automatique du solde du mois précédent.
-- **Épargne** : comptes / livrets à solde cumulé, objectifs et estimation du délai pour les atteindre.
+- **Épargne** : comptes / livrets à solde cumulé et total d'épargne.
+  - **Objectifs** avec estimation du délai au rythme actuel, et **date cible optionnelle** (activable par compte) qui calcule le versement mensuel nécessaire et indique si le rythme est suffisant.
+  - **Évolution de l'épargne** : graphe du solde total mois par mois (6 mois / 12 mois / tout), ligne d'objectif, versement moyen et évolution sur la période.
+- **Crédits & remboursements** : suivi du restant dû par crédit ; chaque remboursement coché réduit automatiquement le montant restant.
 - **Budgets** par catégorie, alignables en un clic sur le réel dépensé.
+- **Catégories personnalisées** : création, modification et suppression (ou masquage si des dépenses y sont déjà rattachées), avec choix de couleur et d'icône.
+- **Tendances** : vue d'évolution (dépenses / épargne / solde sur 3, 6 ou 12 mois) et tableau comparatif d'une année sur l'autre.
 - **Base récurrente** : revenus / charges / épargne / budgets réutilisés chaque mois.
 - **Navigation par mois**, données conservées d'un mois à l'autre.
+- **Application installable (PWA)** : ajout à l'écran d'accueil sur mobile, fonctionne hors-ligne, glisser vers le bas pour rafraîchir.
+- **Comptes & sécurité** : création de compte, mot de passe, protection anti-robot (CAPTCHA) et suppression de compte confirmée par mot de passe.
 - **Synchronisation multi-appareils** optionnelle (mobile ↔ PC) via un compte.
 
 ---
@@ -112,7 +119,7 @@ Astuce : en branchant Netlify ou Cloudflare Pages sur ce dépôt, l'app se redé
 
 ## 🎨 Personnalisation rapide
 
-- **Catégories** : modifie le tableau `CATS` en haut du script (nom, couleur, identifiant). Les icônes proviennent de [Lucide](https://lucide.dev).
+- **Catégories** : ajoute, modifie ou supprime tes catégories directement dans l'app (onglet **Budgets**), avec choix de couleur et d'icône. Les catégories par défaut se règlent dans le tableau `CATS` en haut du script. Les icônes proviennent de [Lucide](https://lucide.dev).
 - **Icône / favicon** : remplace `jupiter-icon.png` par ton image (carrée). Les favicons peuvent être régénérés à partir de cette image.
 - **Couleurs / thème** : variables CSS dans le bloc `:root` (palette orange/beige « Jupiter »).
 
