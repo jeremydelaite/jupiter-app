@@ -1055,7 +1055,7 @@ function daysInfo(){
   const [y,m]=store.current.split("-").map(Number);
   const total=new Date(y,m,0).getDate();
   const today=new Date(); let elapsed;
-  if(today.getFullYear()===y && (today.getMonth()+1)===m) elapsed=today.getDate();
+  if(today.getFullYear()===y && (today.getMonth()+1)===m) elapsed=today.getDate()-1; // le jour en cours compte encore
   else if(today<new Date(y,m-1,1)) elapsed=0; else elapsed=total;
   return {total, remaining:Math.max(0,total-elapsed)};
 }
@@ -1113,7 +1113,11 @@ function renderDash(){
   const spentTotal = actualFixed()+totalVar()+actualSavings();
   const pct = inc>0 ? Math.min(100, spentTotal/inc*100) : 0;
   const heroBar=document.getElementById("heroBar");
-  requestAnimationFrame(()=>{ heroBar.style.width=pct+"%"; });
+  heroBar.style.transition="none";            // on fige la barre à 0 sans animation
+  heroBar.style.width="0%";
+  void heroBar.offsetWidth;                    // force le rendu à 0
+  heroBar.style.transition="";                 // restaure la transition CSS (1.4s)
+  requestAnimationFrame(()=>{ requestAnimationFrame(()=>{ heroBar.style.width=pct+"%"; }); });
   const fa=document.getElementById("foreAmt"); fa.textContent=fmt(forecastLeft());
   fa.style.color = forecastLeft()<0 ? "#fff2ec" : "#fff";
 
