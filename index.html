@@ -711,14 +711,14 @@
     </div>
     <div id="authHint" class="sub" style="display:none;font-size:12px;margin:-4px 0 10px">Min. 8 caractères, avec au moins une majuscule, une minuscule et un chiffre.</div>
     <div id="authErr" class="auth-err"></div>
-    <div style="display:flex;justify-content:center;margin-bottom:12px;min-height:66px"><div class="cf-turnstile" data-sitekey="0x4AAAAAAD6tnrhvgBARHF2v" data-callback="onCaptcha" data-expired-callback="onCaptchaExpire" data-theme="light"></div></div>
+    <div style="display:flex;justify-content:center;margin-bottom:12px;min-height:66px"><div id="turnstileBox"></div></div>
     <button class="btn" id="authSubmit" onclick="authSubmit()">Se connecter</button>
     <div class="auth-toggle">Pas encore de compte ? <a id="authToggle" onclick="toggleAuthMode()">Créer un compte</a></div>
   </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+<script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit&onload=onloadTurnstile" async defer></script>
 <script>
 /* ============ CONFIG SUPABASE ============ */
 /* Remplace ces 2 valeurs par celles de ton projet Supabase (Settings → API).
@@ -2018,8 +2018,17 @@ window.resolveCloud=async(choice)=>{
   if(choice==="reload"){ await pullCloud(); render(); toast("Version du cloud rechargée ✓"); }
   else { cloudUpdatedAt=cloudConflict._remote||new Date().toISOString(); await pushCloud(); toast("Ta version a été envoyée ✓"); }
 };
-function showAuth(){ document.getElementById("authOverlay").classList.add("show"); document.body.style.overflow="hidden"; }
+function showAuth(){ authShown=true; document.getElementById("authOverlay").classList.add("show"); document.body.style.overflow="hidden";
+  // Rendu du captcha seulement une fois l'écran de connexion visible et stable (évite le clignotement iOS/PWA)
+  requestAnimationFrame(()=>requestAnimationFrame(renderTurnstile)); }
+function renderTurnstile(){
+  if(!TURNSTILE_SITE_KEY || !turnstileReady || !window.turnstile || !authShown) return;
+  const box=document.getElementById("turnstileBox"); if(!box) return;
+  if(turnstileWidget!==null){ try{ window.turnstile.reset(turnstileWidget); }catch(e){} return; }
+  try{ turnstileWidget=window.turnstile.render(box,{ sitekey:TURNSTILE_SITE_KEY, theme:"light", callback:onCaptcha, "expired-callback":onCaptchaExpire }); }catch(e){}
+}
 function showApp(){
+  authShown=false;
   document.getElementById("authOverlay").classList.remove("show"); document.body.style.overflow="";
   const pm=document.getElementById("profileMenu");
   if(sb && currentUser){
@@ -2068,7 +2077,7 @@ window.authSubmit=async()=>{
     }
   }catch(e){ err.style.color="var(--red)"; err.textContent=e.message||"Erreur de connexion."; }
   finally{ btn.disabled=false; btn.textContent=lbl;
-    if(TURNSTILE_SITE_KEY && window.turnstile){ try{ window.turnstile.reset(); }catch(e){} captchaToken=null; } }
+    if(TURNSTILE_SITE_KEY && window.turnstile && turnstileWidget!==null){ try{ window.turnstile.reset(turnstileWidget); }catch(e){} captchaToken=null; } }
 };
 window.toggleProfileMenu=(e)=>{ if(e) e.stopPropagation(); document.getElementById("profileDropdown").classList.toggle("open"); };
 document.addEventListener("click",()=>{ const d=document.getElementById("profileDropdown"); if(d) d.classList.remove("open"); });
@@ -2128,8 +2137,10 @@ window.signOut=async()=>{
   },"Se déconnecter",false);
 };
 
-window.onCaptcha=t=>{ captchaToken=t; };
-window.onCaptchaExpire=()=>{ captchaToken=null; };
+function onCaptcha(t){ captchaToken=t; }
+function onCaptchaExpire(){ captchaToken=null; }
+window.onCaptcha=onCaptcha; window.onCaptchaExpire=onCaptchaExpire;
+window.onloadTurnstile=()=>{ turnstileReady=true; if(authShown) renderTurnstile(); };
 async function boot(){
   injectIcons();
   document.querySelectorAll(".pw-eye").forEach(b=>b.innerHTML=EYE);
