@@ -111,7 +111,7 @@
   body[data-theme="nuit"] .month-panel, body[data-theme="nuit"] .profile-dropdown{ background:linear-gradient(160deg,rgba(40,39,78,.94),rgba(30,29,60,.88)) }
   body[data-theme="nuit"] .modal-bg{ background:rgba(0,0,0,.5) }
   body[data-theme="nuit"] .mp-item:hover{ background:rgba(123,140,255,.16) }
-  body[data-theme="nuit"] .goal-sel{ background-image:linear-gradient(160deg,rgba(54,53,96,.7),rgba(42,41,80,.6)),url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23c3b3ff' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E") }
+  body[data-theme="nuit"] .goal-sel{ background-image:linear-gradient(160deg,rgba(54,53,96,.7),rgba(42,41,80,.6)),url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23c3b3ff' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E"); background-repeat:no-repeat,no-repeat; background-position:center,right 11px center; background-size:auto,12px }
   /* en-tête sombre : sélecteur de mois + bouton profil plus lisibles */
   body[data-theme="nuit"] .month-pick{ background:linear-gradient(160deg,rgba(58,57,104,.8),rgba(44,43,84,.66)); border-color:rgba(255,255,255,.16) }
   body[data-theme="nuit"] .month-pick button{ color:var(--txt) }
@@ -353,7 +353,7 @@
   .goal-sel{width:auto;flex:1;min-width:0;padding:9px 30px 9px 12px;font-size:14px;font-weight:600;border-radius:12px;cursor:pointer;
     -webkit-appearance:none;appearance:none;
     background-image:linear-gradient(160deg,rgba(255,247,235,.72),rgba(247,233,214,.58)),url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23c85a1c' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
-    background-repeat:no-repeat,no-repeat;background-position:center,right 11px center}
+    background-repeat:no-repeat,no-repeat;background-position:center,right 11px center;background-size:auto,12px}
   .goal-actions{display:flex;flex-direction:column;gap:8px;margin-top:8px}
   .goal-actions .btn.sm{width:100%;display:flex;align-items:center;gap:9px;justify-content:flex-start;text-align:left}
   .goal-actions .btn.sm svg{width:16px;height:16px;flex:none;stroke:currentColor}
@@ -1095,14 +1095,18 @@ function maybePromptBase(){
     ()=>{ applyTemplate(M()); render(); toast("Base chargée ✓"); }, "Tout charger", false);
 }
 
-/* ============ HELPERS ============ */
+/* ============ FORMATAGE & DIVERS ============ */
 const fmt = n => "€"+ (Math.round(n*100)/100).toLocaleString("fr-FR",{minimumFractionDigits:2,maximumFractionDigits:2});
 const MAXV = 999999999; // plafond des montants (< 1 milliard)
-function fitHero(){ const la=document.getElementById("leftAmt"); if(!la||!la.clientWidth) return;
+function fitHero(){ const la=document.getElementById("leftAmt"); if(!la||!la.clientWidth) return; // (DOM) ajuste la taille du montant héro
   let fs=46; la.style.fontSize=fs+"px"; let g=0;
   while(la.scrollWidth>la.clientWidth && fs>18 && g<30){ fs-=2; la.style.fontSize=fs+"px"; g++; } }
 const sum = (arr,key) => arr.reduce((a,x)=>a+(+x[key]||0),0);
 
+/* ============ CALCULS — logique de calcul du budget ============
+   Ces fonctions ne touchent pas au DOM. La plupart lisent le mois courant via M()
+   et le store global ; monthLeftFor(mo) et prevMonthKey(key) sont pures (tout vient des arguments).
+   Elles sont exposées en bas du script via window.Jupiter.calc pour d'éventuels tests. */
 function actualFixed(){ return M().fixed.reduce((a,f)=>a+(f.paid?(+f.actual||0):0),0); }
 function plannedFixed(){ return sum(M().fixed,"planned"); }
 function actualSavings(){ return M().savings.reduce((a,s)=>a+(s.done?(+s.actual||0):0),0); }
@@ -1157,6 +1161,8 @@ function monthLeftFor(mo){
   const aRep=(mo.credits||[]).reduce((a,c)=>a+(c.done?(+c.actual||0):0),0);
   return (+mo.startBalance||0)+rInc-aFix-tVar-aSav-aRep;
 }
+
+/* ============ DATES & LIBELLÉS ============ */
 const cap = s => s.charAt(0).toUpperCase()+s.slice(1);
 function todayStr(){ const d=new Date(); return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
 function monthName(key){ const [y,m]=key.split("-").map(Number);
@@ -2398,6 +2404,18 @@ document.addEventListener("focusout",()=>{
     hideCardValidate();
   },120);
 });
+
+/* ============ HOOK DE TEST (sans effet sur le runtime) ============
+   Donne accès aux fonctions de calcul et au store pour d'éventuels tests
+   (ex. dans la console ou un harnais). Rien dans l'app ne lit cet objet. */
+window.Jupiter = {
+  get store(){ return store; },
+  setStore(s){ store = s; },
+  calc: { leftToSpend, forecastLeft, monthLeftFor, prevMonthKey, daysInfo, goalPlan, monthsUntil,
+          recomputeReports, actualFixed, plannedFixed, actualSavings, monthlyForAccount,
+          realIncome, plannedIncome, spentByCat, totalVar, budgetTotal, plannedSavings,
+          actualRepay, plannedRepay }
+};
 </script>
 </body>
 </html>
