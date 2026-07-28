@@ -939,6 +939,7 @@ function ensureReport(key){
 }
 /* Recalcule les reports « du mois précédent » en chaîne, dans l'ordre chronologique.
    Le tout premier mois (sans précédent) garde son solde initial éventuel. */
+const isReportLine=x=>!!x && (x.report===true || x.name==="Report du mois précédent");
 function recomputeReports(){
   const keys=Object.keys(store.months||{}).sort();
   keys.forEach(k=>{
@@ -946,8 +947,8 @@ function recomputeReports(){
     const pk=prevMonthKey(k);
     if(!store.months[pk]) return;              // pas de mois précédent → on conserve un éventuel solde initial
     const r=monthLeftFor(store.months[pk]);
-    const rep=(mo.income||[]).find(x=>x.report);
-    if(rep){ rep.planned=r; rep.actual=r; rep.received=true; }
+    const rep=(mo.income||[]).find(isReportLine);
+    if(rep){ rep.report=true; rep.planned=r; rep.actual=r; rep.received=true; }
     else { if(!mo.income) mo.income=[]; mo.income.unshift({name:"Report du mois précédent", planned:r, actual:r, received:true, report:true}); }
   });
 }
@@ -1255,15 +1256,15 @@ window.toggleFixed=i=>{ const fx=M().fixed[i]; fx.paid=!fx.paid; if(fx.paid) fx.
 function renderIncome(){
   document.getElementById("incomeSum").innerHTML=`Reçu <b>${fmt(realIncome())}</b> / prévu ${fmt(plannedIncome())} — coche un revenu quand il est encaissé.`;
   const inc=M().income;
-  document.getElementById("incomeList").innerHTML = inc.length ? inc.map((x,i)=>`<div class="lrow">
-    <div class="chk ${x.received?'on':''}" ${x.report?'style="pointer-events:none;opacity:.6" title="Report automatique du mois précédent"':`onclick="toggleIncome(${i})" title="Cocher quand le revenu est reçu"`}>✓</div>
+  document.getElementById("incomeList").innerHTML = inc.length ? inc.map((x,i)=>{ const rep=isReportLine(x); return `<div class="lrow">
+    <div class="chk ${x.received?'on':''}" ${rep?'style="pointer-events:none;opacity:.6" title="Report automatique du mois précédent"':`onclick="toggleIncome(${i})" title="Cocher quand le revenu est reçu"`}>✓</div>
     <input class="name-in" type="text" value="${escapeHtml(x.name)}" data-kind="incomename" data-i="${i}">
     <div class="fx-amts">
       <div><span class="amt-lbl" style="color:${x.received?'var(--green)':'var(--muted)'}">${x.received?'Reçu':'Prévu'}</span>
         <input class="amt-in" type="number" step="0.01" inputmode="decimal" value="${x.received?x.actual:x.planned}" data-kind="income" data-i="${i}" data-field="${x.received?'actual':'planned'}"></div>
     </div>
-    ${x.report?'<span style="width:26px;flex:none"></span>':`<button class="del" onclick="delItem('income',${i})">${TRASH}</button>`}
-  </div>`).join("") : '<div class="empty">Aucun revenu.</div>';
+    ${rep?'<span style="width:26px;flex:none"></span>':`<button class="del" onclick="delItem('income',${i})">${TRASH}</button>`}
+  </div>`; }).join("") : '<div class="empty">Aucun revenu.</div>';
 }
 window.toggleIncome=i=>{ const x=M().income[i]; x.received=!x.received; if(x.received) x.actual=x.planned; render(); };
 
