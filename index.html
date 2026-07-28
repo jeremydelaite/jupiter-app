@@ -520,6 +520,20 @@
       <div class="card" id="accountList"></div>
       <div class="toolbar" style="margin-top:12px"><button class="btn ghost sm" onclick="manageGoals()"><i class="bic" data-ic="bars"></i>Gérer/Voir les objectifs</button></div>
 
+      <div id="savEvoBlock" style="display:none">
+        <div class="section-h"><h3>Évolution de l'épargne</h3></div>
+        <div class="subtabs base-subtabs" id="savPeriod">
+          <a data-per="6" class="active" onclick="setSavPeriod(6)">6 mois</a>
+          <a data-per="12" onclick="setSavPeriod(12)">12 mois</a>
+          <a data-per="0" onclick="setSavPeriod(0)">Tout</a>
+        </div>
+        <div class="card">
+          <canvas id="savChart" style="width:100%;display:block"></canvas>
+          <div class="legend" id="savLegend" style="margin-top:14px;flex-direction:row;flex-wrap:wrap;gap:14px"></div>
+        </div>
+        <div class="card" id="savStats" style="margin-top:12px"></div>
+      </div>
+
       <div class="section-h"><h3>Versements du mois</h3><span class="muted" id="saveSum" style="font-size:13px;font-weight:600"></span></div>
       <div class="toolbar"><button class="btn ghost sm" onclick="openAdd('save')">+ Ajouter un versement</button></div>
       <div class="card" id="saveList"></div>
@@ -984,6 +998,28 @@ function monthsToGoal(acc){
   if(m<=0) return {noRate:true};
   return {months:Math.ceil((goal-bal)/m), rate:m};
 }
+function monthsUntil(key){ // nb de mois entre le mois courant et key (>=1 si futur)
+  const [y1,m1]=store.current.split("-").map(Number);
+  const [y2,m2]=key.split("-").map(Number);
+  return (y2-y1)*12+(m2-m1);
+}
+function goalPlan(acc){
+  const goal=+acc.goal||0, bal=+acc.balance||0;
+  if(goal<=0) return {type:"none"};
+  if(bal>=goal) return {type:"done"};
+  const remaining=goal-bal;
+  const rate=monthlyForAccount(acc.id);
+  if(acc.goalDate){
+    const n=monthsUntil(acc.goalDate);
+    if(n<=0) return {type:"overdue", remaining, rate};
+    const need=remaining/n;
+    const onTrack = rate>0 && rate>=need-0.005;
+    return {type:"date", remaining, need, n, dateKey:acc.goalDate, rate, onTrack};
+  }
+  if(rate<=0) return {type:"noRate", remaining};
+  return {type:"rate", remaining, rate, months:Math.ceil(remaining/rate)};
+}
+function goalDateLabel(key){ const [y,m]=key.split("-").map(Number); return new Date(y,m-1,1).toLocaleDateString("fr-FR",{month:"long",year:"numeric"}); }
 function realIncome(){ return M().income.reduce((a,i)=>a+(i.received?(+i.actual||0):0),0); }
 function plannedIncome(){ return sum(M().income,"planned"); }
 function spentByCat(){ const o={}; allCats().forEach(c=>o[c.id]=0); M().tx.forEach(t=>{o[t.cat]=(o[t.cat]||0)+(+t.amount||0)}); return o; }
@@ -1221,11 +1257,17 @@ function renderAccounts(){
       <div class="acc-col" style="text-align:right"><span class="mini-lbl" style="margin:0">Réel</span></div>
     </div><div style="width:26px;flex:none"></div></div>`;
   let hs = sav.length ? headerS + sav.map(a=>{
-    const p=monthsToGoal(a);
+    const p=goalPlan(a);
     let proj="";
-    if(p===null) proj=`<small class="muted">Pas d'objectif défini</small>`;
-    else if(p.done) proj=`<small style="color:var(--green);font-weight:700">🎉 Objectif atteint</small>`;
-    else if(p.noRate) proj=`<small class="muted">Ajoute un versement pour estimer</small>`;
+    if(p.type==="none") proj=`<small class="muted">Pas d'objectif défini</small>`;
+    else if(p.type==="done") proj=`<small style="color:var(--green);font-weight:700">🎉 Objectif atteint</small>`;
+    else if(p.type==="date"){
+      const col=p.onTrack?"var(--green)":"var(--amber)";
+      proj=`<small class="muted">${fmt(p.remaining)} restants d'ici ${goalDateLabel(p.dateKey)} · <b style="color:var(--teal)">${fmt(p.need)}/mois</b> nécessaires</small>`
+        +`<br><small style="color:${col};font-weight:700">${p.onTrack?'✓ Au rythme actuel, objectif tenu':'⚠ Rythme actuel insuffisant ('+fmt(p.rate)+'/mois)'}</small>`;
+    }
+    else if(p.type==="overdue") proj=`<small style="color:var(--amber);font-weight:700">Échéance dépassée · ${fmt(p.remaining)} restants</small>`;
+    else if(p.type==="noRate") proj=`<small class="muted">Ajoute un versement pour estimer</small>`;
     else proj=`<small class="muted">≈ <b style="color:var(--teal)">${p.months} mois</b> pour l'objectif (${fmt(p.rate)}/mois)</small>`;
     return `<div class="lrow" style="align-items:flex-start">
       <div class="ci" style="width:36px;height:36px;border-radius:12px;background:#dcefec;display:grid;place-items:center;flex:none">${BANK}</div>
@@ -1275,6 +1317,7 @@ function renderSave(){
       <button class="del" onclick="delItem('savings',${i})">${TRASH}</button>
     </div>`;
   }).join("") : '<div class="empty">Aucun versement ce mois.</div>';
+  renderSavHistory();
 }
 window.toggleSave=i=>{ const s=M().savings[i]; s.done=!s.done; if(s.done) s.actual=s.planned; applyCredit(s); render(); };
 window.setSaving=(i,field,v)=>{ const s=M().savings[i]; s[field]=+v||0; applyCredit(s); render(); };
@@ -1339,16 +1382,30 @@ window.manageGoals=()=>{
   const accs=(store.accounts||[]).filter(a=>(a.type||"epargne")!=="credit");
   const box=document.getElementById("modalBox");
   box.innerHTML=`<button class="mclose" onclick="closeModal()">✕</button>
-    <h3>Objectifs d'épargne</h3><p class="sub">Définis un montant à atteindre pour chaque compte.</p>
-    ${accs.length ? accs.map(a=>`<div class="lrow">
-      <div class="ci" style="width:34px;height:34px;border-radius:11px;background:#dcefec;display:grid;place-items:center;flex:none">${BANK}</div>
-      <div class="lname" style="flex:1;min-width:0">${escapeHtml(a.name)}</div>
-      <input class="amt-in" type="number" step="0.01" inputmode="decimal" value="${a.goal||0}" onchange="setGoalNow('${a.id}',this.value)">
-    </div>`).join("") : '<div class="empty">Aucun compte épargne pour le moment.</div>'}
+    <h3>Objectifs d'épargne</h3><p class="sub">Un montant à atteindre et, en option, une date cible.</p>
+    ${accs.length ? accs.map(a=>{
+      const p=goalPlan(a);
+      let hint="";
+      if(p.type==="date") hint=`<small class="muted" style="display:block;margin-top:4px">${fmt(p.need)}/mois nécessaires d'ici ${goalDateLabel(p.dateKey)}</small>`;
+      else if(p.type==="rate") hint=`<small class="muted" style="display:block;margin-top:4px">≈ ${p.months} mois au rythme actuel</small>`;
+      else if(p.type==="done") hint=`<small style="color:var(--green);font-weight:700;display:block;margin-top:4px">🎉 Atteint</small>`;
+      return `<div style="padding:10px 0;border-bottom:1px solid var(--line)">
+      <div class="lrow" style="padding:0">
+        <div class="ci" style="width:34px;height:34px;border-radius:11px;background:#dcefec;display:grid;place-items:center;flex:none">${BANK}</div>
+        <div class="lname" style="flex:1;min-width:0">${escapeHtml(a.name)}</div>
+        <input class="amt-in" type="number" step="0.01" inputmode="decimal" placeholder="Objectif €" value="${a.goal||0}" onchange="setGoalNow('${a.id}',this.value)">
+      </div>
+      <div class="lrow" style="padding:6px 0 0 44px">
+        <label class="f" style="flex:none;margin:0 8px 0 0">Date cible</label>
+        <input type="month" class="date-in" value="${a.goalDate||''}" onchange="setGoalDate('${a.id}',this.value)" style="flex:1;min-width:0">
+      </div>
+      ${hint}
+    </div>`;}).join("") : '<div class="empty">Aucun compte épargne pour le moment.</div>'}
     <button class="btn" style="margin-top:16px" onclick="closeModal()">Terminé</button>`;
   document.getElementById("modalBg").classList.add("on"); document.body.style.overflow="hidden";
 };
-window.setGoalNow=(id,v)=>{ const a=findAcc(id); if(a){ a.goal=+v||0; save(); renderAccounts(); } };
+window.setGoalNow=(id,v)=>{ const a=findAcc(id); if(a){ a.goal=+v||0; save(); renderAccounts(); manageGoals(); } };
+window.setGoalDate=(id,v)=>{ const a=findAcc(id); if(a){ if(v) a.goalDate=v; else delete a.goalDate; save(); renderAccounts(); manageGoals(); } };
 window.delAccount=id=>{
   const a=findAcc(id); if(!a) return;
   confirmDialog("Supprimer le compte « "+a.name+" » ? Son solde suivi et ses versements associés seront supprimés.",()=>{
@@ -1426,9 +1483,10 @@ function drawLineChart(canvasId, labels, series){
   const X=i=> labels.length<=1?padL+W/2 : padL+i*(W/(labels.length-1));
   const Y=v=> padT+H-((v-mn)/(mx-mn))*H;
   ctx.strokeStyle="#e6d6bd"; ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(padL,Y(0)); ctx.lineTo(cssW-padR,Y(0)); ctx.stroke();
-  series.forEach(s=>{ ctx.strokeStyle=s.color; ctx.lineWidth=2.5; ctx.lineJoin="round"; ctx.beginPath();
+  series.forEach(s=>{ ctx.strokeStyle=s.color; ctx.lineWidth=2.5; ctx.lineJoin="round"; ctx.setLineDash(s.dashed?[6,5]:[]); ctx.beginPath();
     s.vals.forEach((v,i)=>{ const xx=X(i),yy=Y(v); i?ctx.lineTo(xx,yy):ctx.moveTo(xx,yy); }); ctx.stroke();
-    ctx.fillStyle=s.color; s.vals.forEach((v,i)=>{ ctx.beginPath(); ctx.arc(X(i),Y(v),2.6,0,7); ctx.fill(); }); });
+    ctx.setLineDash([]);
+    if(!s.dashed){ ctx.fillStyle=s.color; s.vals.forEach((v,i)=>{ ctx.beginPath(); ctx.arc(X(i),Y(v),2.6,0,7); ctx.fill(); }); } });
   ctx.fillStyle="#9c8a74"; ctx.font="600 11px -apple-system,sans-serif"; ctx.textAlign="center";
   const step=Math.max(1,Math.ceil(labels.length/6));
   labels.forEach((lbl,i)=>{ if(labels.length>7 && (i%step!==0) && i!==labels.length-1) return; ctx.fillText(lbl, X(i), cssH-8); });
@@ -1476,6 +1534,46 @@ window.setTrendMode=(m)=>{ trendMode=m; document.querySelectorAll("#trendMode [d
   document.getElementById("compBlock").style.display=m==="comp"?"block":"none";
   renderTrends(); };
 window.openTrends=()=>{ const d=document.getElementById("profileDropdown"); if(d) d.classList.remove("open"); go("trends"); setTrendMode(trendMode); setTrendPeriod(trendPeriod); };
+
+/* ---- Historique / évolution de l'épargne ---- */
+let savPeriod=6;
+function monthKeysFor(period){
+  let [y,m]=store.current.split("-").map(Number); const keys=[];
+  if(period===0){
+    const ex=Object.keys(store.months||{}).sort();
+    if(!ex.length) return [store.current];
+    let [sy,sm]=ex[0].split("-").map(Number); let g=0;
+    while((sy<y||(sy===y&&sm<=m)) && g<120){ keys.push(sy+"-"+String(sm).padStart(2,"0")); sm++; if(sm>12){sm=1;sy++;} g++; }
+  } else {
+    for(let i=period-1;i>=0;i--){ const d=new Date(y,m-1-i,1); keys.push(d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")); }
+  }
+  return keys;
+}
+function savInflow(key){ const mo=(store.months||{})[key]; return mo?(mo.savings||[]).reduce((a,s)=>a+(s.done?(+s.actual||0):0),0):0; }
+function totalSavingsNow(){ return (store.accounts||[]).filter(a=>(a.type||"epargne")!=="credit").reduce((a,x)=>a+(+x.balance||0),0); }
+function renderSavHistory(){
+  const block=document.getElementById("savEvoBlock"); if(!block) return;
+  const accs=(store.accounts||[]).filter(a=>(a.type||"epargne")!=="credit");
+  if(!accs.length){ block.style.display="none"; return; }
+  block.style.display="block";
+  const keys=monthKeysFor(savPeriod);
+  const total=totalSavingsNow();
+  const vals=new Array(keys.length); vals[keys.length-1]=total;
+  for(let i=keys.length-2;i>=0;i--){ vals[i]=vals[i+1]-savInflow(keys[i+1]); }
+  const labels=keys.map(k=>new Date(k+"-01").toLocaleDateString("fr-FR",{month:"short"}).replace(".",""));
+  const series=[{name:"Épargne totale",color:"#2fa79c",vals}];
+  const goalSum=accs.reduce((a,x)=>a+(+x.goal||0),0);
+  if(goalSum>0) series.push({name:"Objectif",color:"#c85a1c",vals:keys.map(()=>goalSum),dashed:true});
+  if(!drawLineChart("savChart",labels,series)) return;
+  document.getElementById("savLegend").innerHTML=series.map(s=>`<div class="li"><span class="sw" style="background:${s.color}"></span>${s.name}</div>`).join("");
+  const gain=vals[vals.length-1]-vals[0];
+  const avg=keys.reduce((a,k)=>a+savInflow(k),0)/keys.length;
+  document.getElementById("savStats").innerHTML=
+    `<div class="lrow"><div class="lname" style="flex:1">Épargne actuelle</div><div class="lamt" style="color:var(--teal)">${fmt(total)}</div></div>`+
+    `<div class="lrow"><div class="lname" style="flex:1">Évolution sur la période</div><div class="lamt" style="color:${gain>=0?'var(--green)':'var(--red)'}">${gain>=0?'+':''}${fmt(gain)}</div></div>`+
+    `<div class="lrow"><div class="lname" style="flex:1">Versement moyen / mois</div><div class="lamt">${fmt(avg)}</div></div>`;
+}
+window.setSavPeriod=(n)=>{ savPeriod=n; document.querySelectorAll("#savPeriod [data-per]").forEach(b=>b.classList.toggle("active",+b.dataset.per===n)); renderSavHistory(); };
 
 /* ---- Catégories personnalisées ---- */
 let ncColor=CAT_COLORS[0], ncIcon="bag", editCatId=null;
@@ -1604,6 +1702,7 @@ function go(view){
   const fab=document.querySelector(".fab");
   if(fab) fab.style.display=(view==="dash"||view==="tx")?"grid":"none";
   if(view==="dash") setTimeout(fitHero,0);
+  if(view==="save") setTimeout(renderSavHistory,0);
   window.scrollTo({top:0,behavior:"smooth"});
 }
 document.querySelectorAll("[data-nav]").forEach(a=>a.addEventListener("click",()=>go(a.dataset.nav)));
