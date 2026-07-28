@@ -290,7 +290,8 @@
   @media(max-width:859px){.subtabs{display:flex}}
   .subtabs.base-subtabs{display:flex}
   .tx-filter-sel{display:none;margin-bottom:16px;text-transform:capitalize;font-weight:600}
-  @media(max-width:859px){#txFilter{display:none} .tx-filter-sel{display:block}}
+  .cat-sel{display:none;text-transform:capitalize;font-weight:600}
+  @media(max-width:859px){#txFilter{display:none} .tx-filter-sel{display:block} #mCats{display:none} .cat-sel{display:block}}
 
   .fab{position:fixed;right:18px;bottom:70px;z-index:45;width:64px;height:64px;border-radius:50%;
     background:linear-gradient(160deg,rgba(255,253,248,.48),rgba(255,243,229,.32));
@@ -1469,7 +1470,7 @@ function openAdd(type,editIdx){
       <h3>${ed?'Modifier la dépense':'Nouvelle dépense'}</h3><p class="sub">${ed?'Corrige le montant, la catégorie ou la note.':'Ajoute une dépense au mois en cours.'}</p>
       <div class="field"><label class="f">Montant (€)</label>
         <input id="mAmt" class="amount-input" type="number" step="0.01" inputmode="decimal" placeholder="0,00"></div>
-      <div class="field"><label class="f">Catégorie</label><div class="catchips" id="mCats"></div></div>
+      <div class="field"><label class="f">Catégorie</label><div class="catchips" id="mCats"></div><select id="mCatsSel" class="cat-sel" onchange="pickCat(this.value)"></select></div>
       <div class="row2">
         <div class="field"><label class="f">Date</label><input id="mDate" type="date"></div>
         <div class="field"><label class="f">Note</label><input id="mNote" type="text" placeholder="optionnel"></div>
@@ -1517,6 +1518,7 @@ function openAdd(type,editIdx){
 }
 function renderModalCats(){
   document.getElementById("mCats").innerHTML=allCats().map(c=>`<div class="chip ${addCat===c.id?'sel':''}" onclick="pickCat('${c.id}')"><span class="e">${catIcon(c,16)}</span>${c.name}</div>`).join("");
+  const sel=document.getElementById("mCatsSel"); if(sel) sel.innerHTML=allCats().map(c=>`<option value="${c.id}" ${addCat===c.id?'selected':''}>${c.name}</option>`).join("");
 }
 window.pickCat=id=>{addCat=id;renderModalCats();};
 window.closeModal=()=>{ document.getElementById("modalBg").classList.remove("on"); document.body.style.overflow=""; editTxIndex=null; };
@@ -1705,17 +1707,35 @@ window.changePassword=async()=>{
   finally{ if(btn) btn.disabled=false; }
 };
 window.deleteAccount=()=>{
-  confirmDialog("Supprimer DÉFINITIVEMENT ton compte et toutes tes données ? Cette action est irréversible.", async()=>{
-    if(!sb || !currentUser){ toast("Non connecté",true); return; }
-    try{
-      const {error}=await sb.rpc('delete_account');
-      if(error) throw error;
-      try{ localStorage.removeItem(LS_KEY); }catch(e){}
-      try{ await sb.auth.signOut(); }catch(e){}
-      toast("Compte supprimé");
-      setTimeout(()=>location.reload(),700);
-    }catch(e){ toast(e.message||"Erreur lors de la suppression",true); }
-  }, "Supprimer définitivement", true);
+  if(!sb || !currentUser){ toast("Non connecté",true); return; }
+  const box=document.getElementById("modalBox");
+  box.innerHTML=`<button class="mclose" onclick="closeModal()">✕</button>
+    <h3>Supprimer mon compte</h3>
+    <p class="sub">Action <b>irréversible</b>. Entre ton mot de passe pour confirmer la suppression de ton compte et de toutes tes données.</p>
+    <div class="field"><label class="f">Mot de passe</label>
+      <div class="pw-wrap"><input id="delPw" type="password" autocomplete="current-password" onkeydown="if(event.key==='Enter')confirmDeleteAccount()"><button type="button" class="pw-eye" onclick="togglePw('delPw',this)" aria-label="Afficher/masquer"></button></div></div>
+    <div id="delErr" class="auth-err"></div>
+    <div style="display:flex;gap:10px">
+      <button class="btn ghost" onclick="closeModal()">Annuler</button>
+      <button class="btn danger" onclick="confirmDeleteAccount()">Supprimer définitivement</button>
+    </div>`;
+  const eye=box.querySelector(".pw-eye"); if(eye) eye.innerHTML=EYE;
+  setTimeout(()=>document.getElementById("delPw").focus(),100);
+  document.getElementById("modalBg").classList.add("on"); document.body.style.overflow="hidden";
+};
+window.confirmDeleteAccount=async()=>{
+  const pw=document.getElementById("delPw").value;
+  const err=document.getElementById("delErr"); err.style.color="var(--red)";
+  if(!pw){ err.textContent="Entre ton mot de passe."; return; }
+  const btn=event && event.target; if(btn) btn.disabled=true;
+  try{
+    const {data,error}=await sb.rpc('delete_account',{pwd:pw});
+    if(error) throw error;
+    if(data!==true){ err.textContent="Mot de passe incorrect."; if(btn) btn.disabled=false; return; }
+    try{ localStorage.removeItem(LS_KEY); }catch(e){}
+    try{ await sb.auth.signOut(); }catch(e){}
+    toast("Compte supprimé"); setTimeout(()=>location.reload(),700);
+  }catch(e){ err.textContent=e.message||"Erreur lors de la suppression."; if(btn) btn.disabled=false; }
 };
 window.signOut=async()=>{
   confirmDialog("Se déconnecter ? Tes données restent enregistrées dans le cloud.",async()=>{
