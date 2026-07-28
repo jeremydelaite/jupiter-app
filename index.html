@@ -1262,7 +1262,7 @@ function renderIncome(){
       <div><span class="amt-lbl" style="color:${x.received?'var(--green)':'var(--muted)'}">${x.received?'Reçu':'Prévu'}</span>
         <input class="amt-in" type="number" step="0.01" inputmode="decimal" value="${x.received?x.actual:x.planned}" data-kind="income" data-i="${i}" data-field="${x.received?'actual':'planned'}"></div>
     </div>
-    <button class="del" onclick="delItem('income',${i})">${TRASH}</button>
+    ${x.report?'<span style="width:26px;flex:none"></span>':`<button class="del" onclick="delItem('income',${i})">${TRASH}</button>`}
   </div>`).join("") : '<div class="empty">Aucun revenu.</div>';
 }
 window.toggleIncome=i=>{ const x=M().income[i]; x.received=!x.received; if(x.received) x.actual=x.planned; render(); };
