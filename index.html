@@ -2054,12 +2054,35 @@ function injectIcons(){ document.querySelectorAll("[data-ic]").forEach(el=>{ el.
 
 /* ============ THÈMES ============ */
 const THEME_COLOR={ jupiter:"#ec7a2c", rose:"#b45bd6", nuit:"#141329", menthe:"#14b48a" };
+const THEME_HUE={ rose:255, menthe:115, nuit:205 }; // mêmes rotations que le logo
+let faviconLinks=null, faviconOrig=null;
+function retintFavicon(name){
+  const hue=THEME_HUE[name]||0;
+  if(!faviconLinks){
+    faviconLinks=[...document.querySelectorAll('link[rel="icon"][type="image/png"]')];
+    faviconOrig=faviconLinks.map(l=>l.getAttribute("href"));
+  }
+  if(!faviconLinks.length) return;
+  if(hue===0){ faviconLinks.forEach((l,i)=>l.setAttribute("href",faviconOrig[i])); return; }
+  const img=new Image();
+  img.onload=()=>{
+    try{
+      const c=document.createElement("canvas"); c.width=c.height=64;
+      const ctx=c.getContext("2d"); ctx.filter="hue-rotate("+hue+"deg) saturate(1.15)";
+      ctx.drawImage(img,0,0,64,64);
+      const url=c.toDataURL("image/png");
+      faviconLinks.forEach(l=>l.setAttribute("href",url));
+    }catch(e){}
+  };
+  img.src="jupiter-icon.png";
+}
 function applyTheme(name){
   name = THEME_COLOR[name] ? name : "jupiter";
   if(name==="jupiter") document.body.removeAttribute("data-theme");
   else document.body.setAttribute("data-theme",name);
   const meta=document.querySelector('meta[name="theme-color"]'); if(meta) meta.setAttribute("content",THEME_COLOR[name]);
   document.querySelectorAll("#themeRow .theme-opt[data-theme]").forEach(el=>el.classList.toggle("active",el.dataset.theme===name));
+  retintFavicon(name);
 }
 window.setTheme=(name)=>{ store.theme=name; applyTheme(name); save(); toast("Thème appliqué ✓"); };
 
