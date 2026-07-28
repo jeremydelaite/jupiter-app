@@ -40,7 +40,6 @@
   }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
   html,body{margin:0;padding:0}
-  body{overscroll-behavior-y:contain}
   .ptr{position:fixed;top:0;left:0;right:0;display:flex;justify-content:center;pointer-events:none;z-index:70;opacity:0;transform:translateY(-16px);transition:opacity .2s}
   .ptr-circle{width:36px;height:36px;border-radius:50%;display:grid;place-items:center;background:var(--card-solid);border:1px solid var(--glass-border);box-shadow:var(--shadow-sm);color:var(--primary-deep)}
   .ptr-circle svg{width:18px;height:18px}
@@ -49,7 +48,7 @@
   body{
     background:var(--bg); color:var(--txt);
     font-family:var(--font); -webkit-font-smoothing:antialiased;
-    font-size:15px; line-height:1.45; padding-bottom:112px; position:relative; min-height:100vh;
+    font-size:15px; line-height:1.45; padding-bottom:146px; position:relative; min-height:100vh;
   }
   body::before,body::after{content:"";position:fixed;z-index:0;border-radius:50%;filter:blur(45px);pointer-events:none}
   body::before{width:460px;height:460px;top:-160px;right:-120px;
@@ -203,7 +202,6 @@
   .empty{color:var(--muted);text-align:center;padding:36px 10px;font-size:14px}
   .tx-day{display:flex;justify-content:space-between;align-items:center;padding:16px 0 7px;font-size:11.5px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;border-bottom:1px solid var(--line)}
   .tx-day:first-child{padding-top:2px}
-  @media(max-width:859px){ #txList{padding-bottom:56px} }
   .tx-day span:last-child{color:var(--primary-deep);text-transform:none}
 
   .lrow{display:flex;align-items:center;gap:11px;padding:12px 0;border-bottom:1px solid var(--line)}
@@ -250,7 +248,8 @@
     #fixedList .fx-amts > div, #incomeList .fx-amts > div, #saveList .fx-amts > div, #repayList .fx-amts > div{flex-direction:row;align-items:center;gap:8px}
     #fixedList .amt-lbl, #incomeList .amt-lbl, #saveList .amt-lbl, #repayList .amt-lbl{position:static;width:auto;text-align:left;margin:0}
   }
-  .mini-btn{margin-top:6px;background:var(--card2);border:1px solid var(--line);color:var(--primary-deep);font-weight:700;font-size:11.5px;padding:5px 11px;border-radius:10px;cursor:pointer}
+  .mini-btn{margin-top:6px;background:var(--card2);border:1px solid var(--line);color:var(--primary-deep);font-weight:700;font-size:11.5px;padding:5px 11px;border-radius:10px;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+  .mini-btn svg{width:16px;height:16px;flex:none}
   .mini-btn:hover{background:#fff}
 
   label.f{display:block;font-size:12px;color:var(--muted);font-weight:700;margin:0 0 6px;text-transform:uppercase;letter-spacing:.4px}
@@ -293,7 +292,7 @@
   .tx-filter-sel{display:none;margin-bottom:16px;text-transform:capitalize;font-weight:600}
   @media(max-width:859px){#txFilter{display:none} .tx-filter-sel{display:block}}
 
-  .fab{position:fixed;right:18px;bottom:96px;z-index:45;width:64px;height:64px;border-radius:50%;
+  .fab{position:fixed;right:18px;bottom:70px;z-index:45;width:64px;height:64px;border-radius:50%;
     background:linear-gradient(160deg,rgba(255,253,248,.48),rgba(255,243,229,.32));
     backdrop-filter:blur(16px) saturate(1.5);-webkit-backdrop-filter:blur(16px) saturate(1.5);
     border:1px solid var(--glass-border);cursor:pointer;display:grid;place-items:center;
@@ -511,7 +510,7 @@
       <div class="section-h"><h3>Épargne</h3></div>
       <div class="toolbar"><button class="btn ghost sm" onclick="addAccount('epargne')">+ Ajouter un compte</button></div>
       <div class="card" id="accountList"></div>
-      <div class="toolbar" style="margin-top:12px"><button class="btn ghost sm" onclick="manageGoals()"><i class="bic" data-ic="target"></i>Gérer les objectifs</button></div>
+      <div class="toolbar" style="margin-top:12px"><button class="btn ghost sm" onclick="manageGoals()"><i class="bic" data-ic="bars"></i>Gérer les objectifs</button></div>
 
       <div class="section-h"><h3>Versements du mois</h3><span class="muted" id="saveSum" style="font-size:13px;font-weight:600"></span></div>
       <div class="toolbar"><button class="btn ghost sm" onclick="openAdd('save')">+ Ajouter un versement</button></div>
@@ -535,6 +534,7 @@
       <p class="sub">Définis un budget prévisionnel, ou aligne-le sur ce que tu as réellement dépensé.</p>
       <div class="toolbar"><button class="btn ghost sm" onclick="addCategory()">+ Ajouter une catégorie</button></div>
       <div class="card" id="budgetList"></div>
+      <div id="hiddenCatsBox"></div>
       <div class="toolbar" style="margin-top:14px">
         <button class="btn ghost sm" onclick="loadBase('budgets')"><i class="bic" data-ic="download"></i>Charger les budgets</button>
       </div>
@@ -672,8 +672,9 @@ const CATS = [
   {id:"maison", name:"Maison", icon:"🏠", color:"#e0a020"},
   {id:"autre", name:"Autre", icon:"📦", color:"#b08a63"},
 ];
-const catById = id => allCats().find(c=>c.id===id) || CATS[CATS.length-1];
-function allCats(){ return (store.customCats && store.customCats.length) ? CATS.concat(store.customCats) : CATS; }
+const catById = id => allCatsFull().find(c=>c.id===id) || CATS[CATS.length-1];
+function allCatsFull(){ return (store.customCats && store.customCats.length) ? CATS.concat(store.customCats) : CATS; }
+function allCats(){ const hid=store.hiddenCats||[]; return allCatsFull().filter(c=>!hid.includes(c.id)); }
 const CAT_ICONS={
   all:`<line x1="8" x2="21" y1="6" y2="6"/><line x1="8" x2="21" y1="12" y2="12"/><line x1="8" x2="21" y1="18" y2="18"/><line x1="3" x2="3.01" y1="6" y2="6"/><line x1="3" x2="3.01" y1="12" y2="12"/><line x1="3" x2="3.01" y1="18" y2="18"/>`,
   courses:`<circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/>`,
@@ -784,6 +785,7 @@ function uid(){ return "a"+Date.now().toString(36)+Math.random().toString(36).sl
 function migrate(){
   if(!("template" in store)) store.template=null;
   if(!store.customCats) store.customCats=[];
+  if(!store.hiddenCats) store.hiddenCats=[];
   Object.values(store.months||{}).forEach(mo=>{
     (mo.fixed||[]).forEach(fx=>{
       if(fx.planned===undefined) fx.planned = (+fx.amount||0);
@@ -1307,8 +1309,10 @@ window.delAccount=id=>{
 function renderBudget(){
   const spent=spentByCat();
   const header=`<div class="lrow" style="padding-top:0">
+    <div style="width:36px;flex:none"></div>
     <div class="mini-lbl" style="flex:1;margin:0">Catégorie</div>
-    <div class="mini-lbl" style="width:92px;text-align:right;margin:0">Prévision</div>
+    <div class="mini-lbl" style="width:92px;text-align:center;margin:0">Prévision</div>
+    <div style="width:26px;flex:none"></div>
   </div>`;
   const customIds=new Set((store.customCats||[]).map(c=>c.id));
   document.getElementById("budgetList").innerHTML=header+allCats().map(c=>{
@@ -1318,11 +1322,17 @@ function renderBudget(){
     return `<div class="lrow">
     <div class="ci" style="width:36px;height:36px;border-radius:12px;background:${c.color}22;color:${c.color};display:grid;place-items:center;flex:none">${catIcon(c,20)}</div>
     <div class="lname" style="flex:1;min-width:90px">${escapeHtml(c.name)}<br><small class="muted">dépensé ${fmt(s)}</small>
-      ${showAlign?`<br><button class="mini-btn" onclick="alignBudget('${c.id}')">↺ Aligner sur le réel (${fmt(s)})</button>`:""}
+      ${showAlign?`<br><button class="mini-btn" onclick="alignBudget('${c.id}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>Aligner sur le réel (${fmt(s)})</button>`:""}
     </div>
     <input class="amt-in" type="number" step="0.01" value="${b}" data-kind="budget" data-catid="${c.id}">
-    ${isCustom?`<button class="del" onclick="delCategory('${c.id}')">${TRASH}</button>`:`<div style="width:26px;flex:none"></div>`}
+    <button class="del" onclick="${isCustom?`delCategory('${c.id}')`:`hideCategory('${c.id}')`}">${TRASH}</button>
   </div>`;}).join("");
+  const hid=(store.hiddenCats||[]); const hbox=document.getElementById("hiddenCatsBox");
+  if(hbox){
+    const list=CATS.filter(c=>hid.includes(c.id));
+    hbox.innerHTML = list.length ? `<div class="section-h"><h3>Catégories masquées</h3></div><div class="card">`+
+      list.map(c=>`<div class="lrow"><div class="ci" style="width:34px;height:34px;border-radius:11px;background:${c.color}22;display:grid;place-items:center;flex:none">${catIcon(c,18)}</div><div class="lname" style="flex:1;opacity:.7">${c.name}</div><button class="btn ghost sm" onclick="unhideCategory('${c.id}')">Réafficher</button></div>`).join("")+`</div>` : "";
+  }
 }
 window.setBudget=(id,v)=>{ M().budgets[id]=+v||0; save();
   renderCatProgress(); renderBudget();
@@ -1359,6 +1369,15 @@ window.saveCategory=()=>{
   store.customCats.push({id:uid(), name, color:ncColor, icon:ncIcon});
   save(); closeModal(); render(); toast("Catégorie ajoutée ✓");
 };
+window.hideCategory=id=>{
+  const c=catById(id);
+  confirmDialog("Masquer la catégorie « "+(c?c.name:"")+" » ? Elle disparaîtra des listes (réaffichable en bas des budgets). Les dépenses passées ne sont pas supprimées.",()=>{
+    if(!store.hiddenCats) store.hiddenCats=[];
+    if(!store.hiddenCats.includes(id)) store.hiddenCats.push(id);
+    save(); render(); toast("Catégorie masquée");
+  },"Masquer",false);
+};
+window.unhideCategory=id=>{ store.hiddenCats=(store.hiddenCats||[]).filter(x=>x!==id); save(); render(); toast("Catégorie réaffichée ✓"); };
 window.delCategory=id=>{
   const c=catById(id);
   confirmDialog("Supprimer la catégorie « "+(c?c.name:"")+" » ? Les dépenses de cette catégorie seront reclassées en « Autre ».",()=>{
@@ -1583,6 +1602,7 @@ const ICONS={
   savecheck:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M12.5 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h10.2a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4v4.35"/><path d="m16 19 2 2 4-4"/><path d="M17 15.13V14a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7"/><path d="M7 3v4a1 1 0 0 0 1 1h7"/></svg>`,
   download:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V3"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/></svg>`,
   target:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>`,
+  bars:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v16a2 2 0 0 0 2 2h16"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></svg>`,
   manage:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><line x1="21" x2="14" y1="4" y2="4"/><line x1="10" x2="3" y1="4" y2="4"/><line x1="21" x2="12" y1="12" y2="12"/><line x1="8" x2="3" y1="12" y2="12"/><line x1="21" x2="16" y1="20" y2="20"/><line x1="12" x2="3" y1="20" y2="20"/><line x1="14" x2="14" y1="2" y2="6"/><line x1="8" x2="8" y1="10" y2="14"/><line x1="16" x2="16" y1="18" y2="22"/></svg>`,
   account:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>`,
   logout:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg>`,
@@ -1729,13 +1749,15 @@ document.addEventListener("visibilitychange",()=>{
   }
 });
 
-/* Tirer pour rafraîchir (mobile) : recharge depuis le cloud */
+/* Tirer pour rafraîchir : uniquement en mode application (PWA / écran d'accueil), pas dans le navigateur */
+const isStandalone = (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || window.navigator.standalone===true;
+if(isStandalone) document.body.style.overscrollBehaviorY="contain";
 let ptrStartY=0, ptrPulling=false, ptrDist=0; const PTR_TH=70;
 function ptrReset(){ const el=document.getElementById("ptr"); if(!el)return; el.classList.remove("spin"); el.style.opacity=0; el.style.transform="translateY(-16px)"; }
 async function ptrRefresh(){ const el=document.getElementById("ptr"); if(el) el.classList.add("spin");
   try{ if(sb && currentUser){ lastPull=Date.now(); await pullCloud(); } }catch(e){}
   render(); setTimeout(ptrReset,500); }
-window.addEventListener("touchstart",e=>{ if(window.scrollY<=0 && e.touches.length===1){ ptrStartY=e.touches[0].clientY; ptrPulling=true; ptrDist=0; } else ptrPulling=false; },{passive:true});
+window.addEventListener("touchstart",e=>{ if(!isStandalone) return; if(window.scrollY<=0 && e.touches.length===1){ ptrStartY=e.touches[0].clientY; ptrPulling=true; ptrDist=0; } else ptrPulling=false; },{passive:true});
 window.addEventListener("touchmove",e=>{ if(!ptrPulling)return; ptrDist=e.touches[0].clientY-ptrStartY; const el=document.getElementById("ptr");
   if(ptrDist>0 && window.scrollY<=0){ const d=Math.min(ptrDist,110); el.style.opacity=Math.min(1,d/PTR_TH); el.style.transform="translateY("+Math.min(d-16,56)+"px)"; }
   else { ptrPulling=false; ptrReset(); } },{passive:true});
