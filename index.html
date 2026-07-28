@@ -266,6 +266,8 @@
   input::placeholder,textarea::placeholder{color:var(--muted2)}
   input[type=number]{-moz-appearance:textfield;appearance:textfield}
   input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+  .month-in{cursor:pointer;font-weight:600}
+  .month-in::-webkit-calendar-picker-indicator{cursor:pointer;opacity:.75;filter:sepia(1) saturate(4) hue-rotate(-18deg)}
   input:hover,select:hover,textarea:hover{cursor:pointer;border-color:rgba(255,255,255,.9);box-shadow:var(--sheen), 0 5px 14px rgba(160,110,60,.16)}
   input:focus,select:focus,textarea:focus{cursor:text;
     background:linear-gradient(160deg,rgba(255,248,237,.72),rgba(250,236,217,.55));border-color:var(--primary);
@@ -1392,7 +1394,13 @@ window.manageGoals=()=>{
     ${accs.length ? accs.map(a=>{
       const p=goalPlan(a);
       let hint="";
-      if(p.type==="date") hint=`<small class="muted" style="display:block;margin-top:4px">${fmt(p.need)}/mois nécessaires d'ici ${goalDateLabel(p.dateKey)}</small>`;
+      if(p.type==="date"){
+        hint=`<small class="muted" style="display:block;margin-top:4px">${fmt(p.need)}/mois nécessaires d'ici ${goalDateLabel(p.dateKey)} · versement actuel ${fmt(p.rate)}</small>`;
+        if(p.onTrack) hint+=`<small style="color:var(--green);font-weight:700;display:block;margin-top:2px">✓ Rythme suffisant</small>`;
+        else hint+=`<div class="toolbar" style="margin-top:8px;gap:8px;flex-wrap:wrap">`
+          +(p.rate>0?`<button class="btn ghost sm" onclick="alignGoalDate('${a.id}')">Ajuster la date sur mon rythme</button>`:``)
+          +`<button class="btn ghost sm" onclick="alignVersement('${a.id}')">Ajuster mon versement (${fmt(p.need)}/mois)</button></div>`;
+      }
       else if(p.type==="rate") hint=`<small class="muted" style="display:block;margin-top:4px">≈ ${p.months} mois au rythme actuel</small>`;
       else if(p.type==="done") hint=`<small style="color:var(--green);font-weight:700;display:block;margin-top:4px">🎉 Atteint</small>`;
       return `<div style="padding:10px 0;border-bottom:1px solid var(--line)">
@@ -1406,7 +1414,7 @@ window.manageGoals=()=>{
         <label class="tgl"><input type="checkbox" ${a.goalDate?'checked':''} onchange="toggleGoalDate('${a.id}',this.checked)"><span class="track"></span><span class="knob"></span></label>
       </div>
       ${a.goalDate?`<div class="lrow" style="padding:6px 0 0 44px">
-        <input type="month" value="${a.goalDate}" onchange="setGoalDate('${a.id}',this.value)" style="flex:1;min-width:0">
+        <input type="month" class="month-in" value="${a.goalDate}" min="${store.current}" onchange="setGoalDate('${a.id}',this.value)" onclick="if(this.showPicker)this.showPicker()" onfocus="if(this.showPicker)this.showPicker()" style="flex:1;min-width:0;cursor:pointer">
       </div>`:''}
       ${hint}
     </div>`;}).join("") : '<div class="empty">Aucun compte épargne pour le moment.</div>'}
@@ -1417,6 +1425,28 @@ window.setGoalNow=(id,v)=>{ const a=findAcc(id); if(a){ a.goal=+v||0; save(); re
 window.setGoalDate=(id,v)=>{ const a=findAcc(id); if(a){ if(v) a.goalDate=v; else delete a.goalDate; save(); renderAccounts(); manageGoals(); } };
 function addMonthsKey(key,n){ let [y,m]=key.split("-").map(Number); m+=n; y+=Math.floor((m-1)/12); m=((m-1)%12+12)%12+1; return y+"-"+String(m).padStart(2,"0"); }
 window.toggleGoalDate=(id,on)=>{ const a=findAcc(id); if(!a) return; if(on){ a.goalDate=addMonthsKey(store.current,12); } else { delete a.goalDate; } save(); renderAccounts(); manageGoals(); };
+const round2=x=>Math.round((+x||0)*100)/100;
+window.alignGoalDate=id=>{
+  const a=findAcc(id); if(!a) return;
+  const remaining=(+a.goal||0)-(+a.balance||0);
+  const rate=monthlyForAccount(id);
+  if(rate<=0){ toast("Ajoute un versement d'abord",true); return; }
+  const months=Math.max(1,Math.ceil(remaining/rate));
+  a.goalDate=addMonthsKey(store.current,months);
+  save(); render(); manageGoals(); toast("Date ajustée : "+goalDateLabel(a.goalDate)+" ✓");
+};
+window.alignVersement=id=>{
+  const a=findAcc(id); if(!a) return;
+  const p=goalPlan(a); if(p.type!=="date") return;
+  const need=p.need;
+  const list=M().savings.filter(s=>s.accountId===id);
+  const doneSum=list.filter(s=>s.done).reduce((x,s)=>x+(+s.actual||0),0);
+  const target=Math.max(0, round2(need-doneSum)); // reste à planifier ce mois
+  const editable=list.filter(s=>!s.done);
+  if(editable.length){ editable.forEach((s,idx)=>{ s.planned = idx===0 ? target : 0; }); }
+  else { M().savings.push({accountId:id, name:a.name, planned:target, actual:target, done:false, creditedAmount:0}); }
+  save(); render(); manageGoals(); toast("Versement ajusté : "+fmt(need)+"/mois ✓");
+};
 window.delAccount=id=>{
   const a=findAcc(id); if(!a) return;
   confirmDialog("Supprimer le compte « "+a.name+" » ? Son solde suivi et ses versements associés seront supprimés.",()=>{
