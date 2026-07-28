@@ -603,6 +603,7 @@
         <div class="card" id="baseFixedList"></div>
       </div>
       <div id="baseBudgetBlock" style="display:none">
+        <div class="toolbar"><button class="btn ghost sm" onclick="addCategory()">+ Ajouter une catégorie</button></div>
         <div class="card" id="baseBudgetList"></div>
       </div>
     </section>
@@ -1406,10 +1407,12 @@ function renderBase(){
     <button class="del" onclick="delBase('fixed',${i})">${TRASH}</button>
   </div>`).join("") : '<div class="empty">Aucune charge fixe de base. Ajoute-en une.</div>';
   const bl=document.getElementById("baseBudgetList");
+  const bCustom=new Set((store.customCats||[]).map(x=>x.id));
   if(bl) bl.innerHTML = allCats().map(c=>`<div class="lrow">
     <div class="ci" style="width:36px;height:36px;border-radius:12px;background:${c.color}22;color:${c.color};display:grid;place-items:center;flex:none">${catIcon(c)}</div>
-    <div class="lname" style="flex:1;min-width:80px">${c.name}</div>
+    <div class="lname" style="flex:1;min-width:80px">${escapeHtml(c.name)}</div>
     <input class="amt-in" type="number" step="0.01" value="${t.budgets[c.id]||0}" data-kind="bbud" data-catid="${c.id}">
+    <button class="del" onclick="${bCustom.has(c.id)?`delCategory('${c.id}')`:`hideCategory('${c.id}')`}">${TRASH}</button>
   </div>`).join("");
 }
 window.setBaseTab=(tab)=>{
