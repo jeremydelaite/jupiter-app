@@ -4,6 +4,8 @@ Application web de gestion de dépenses et d'épargne, simple et pratique au quo
 
 Interface « liquid glass » moderne, responsive mobile + ordinateur. Aucune dépendance à installer : tout tient dans un seul fichier `index.html`.
 
+📖 **[Guide d'utilisation complet →](GUIDE.md)** — comment utiliser l'app au quotidien, écran par écran.
+
 ---
 
 ## ✨ Fonctionnalités
@@ -21,9 +23,10 @@ Interface « liquid glass » moderne, responsive mobile + ordinateur. Aucune dé
 - **Tendances** : vue d'évolution (dépenses / épargne / solde sur 3, 6 ou 12 mois) et tableau comparatif d'une année sur l'autre.
 - **Base récurrente** : revenus / charges / épargne / budgets réutilisés chaque mois.
 - **Navigation par mois**, données conservées d'un mois à l'autre.
+- **Thèmes** : Jupiter (orange/beige), Violet Rose, Nuit (sombre) et Menthe, toujours en style liquid glass — choix dans « Mon compte → Apparence », conservé et synchronisé.
 - **Application installable (PWA)** : ajout à l'écran d'accueil sur mobile, fonctionne hors-ligne, glisser vers le bas pour rafraîchir.
 - **Comptes & sécurité** : création de compte, mot de passe, protection anti-robot (CAPTCHA) et suppression de compte confirmée par mot de passe.
-- **Synchronisation multi-appareils** optionnelle (mobile ↔ PC) via un compte.
+- **Synchronisation multi-appareils** optionnelle (mobile ↔ PC) via un compte, avec garde anti-écrasement en cas de modification depuis un autre appareil.
 
 ---
 
@@ -121,7 +124,7 @@ Astuce : en branchant Netlify ou Cloudflare Pages sur ce dépôt, l'app se redé
 
 - **Catégories** : ajoute, modifie ou supprime tes catégories directement dans l'app (onglet **Budgets**), avec choix de couleur et d'icône. Les catégories par défaut se règlent dans le tableau `CATS` en haut du script. Les icônes proviennent de [Lucide](https://lucide.dev).
 - **Icône / favicon** : remplace `jupiter-icon.png` par ton image (carrée). Les favicons peuvent être régénérés à partir de cette image.
-- **Couleurs / thème** : variables CSS dans le bloc `:root` (palette orange/beige « Jupiter »).
+- **Thèmes** : change l'apparence dans l'app (**Mon compte → Apparence** : Jupiter, Violet Rose, Nuit, Menthe). Pour créer un nouveau thème, ajoute un bloc `body[data-theme="..."]` dans le CSS (voir les thèmes existants) ; les couleurs de base sont les variables du bloc `:root`.
 
 ---
 
