@@ -60,6 +60,58 @@
   body[data-theme="rose"] .hero::after{ background:radial-gradient(circle,rgba(229,111,176,.55),transparent 68%) }
   body[data-theme="rose"] .hero::before{ background:radial-gradient(circle,rgba(255,255,255,.16),transparent 70%) }
   body[data-theme="rose"] .auth-brand img, body[data-theme="rose"] .brand .dot img{ filter:hue-rotate(255deg) saturate(1.15) }
+  /* ===== Thème Menthe ===== */
+  body[data-theme="menthe"]{
+    --bg:#e7f4ef; --bg2:#f4fdf9; --card:rgba(250,255,253,.72); --card-solid:#f8fffc; --card2:#daeee7;
+    --line:#cde7de; --line2:#b8ded1;
+    --txt:#123a30; --muted:#6f9488; --muted2:#93b3aa;
+    --primary:#14b48a; --primary2:#3fd0a2; --primary-deep:#0d9478;
+    --green:#5aa838; --greenbg:#e4f2dd;
+    --red:#e0655a; --amber:#dfa23a; --teal:#0ea59c;
+    --glow:rgba(18,180,138,.3);
+    --shadow:0 10px 34px rgba(20,130,100,.16); --shadow-sm:0 4px 16px rgba(20,130,100,.12);
+    --glass:rgba(250,255,253,.52); --glass-2:rgba(248,255,252,.74); --glass-border:rgba(255,255,255,.72);
+    --sheen:inset 0 1px 0 rgba(255,255,255,.7);
+  }
+  body[data-theme="menthe"]::before{ background:radial-gradient(circle at 30% 30%,rgba(63,208,162,.5),rgba(18,180,138,.15) 60%,transparent 72%) }
+  body[data-theme="menthe"]::after{ background:radial-gradient(circle at 60% 40%,rgba(13,148,120,.3),rgba(63,208,162,.12) 55%,transparent 72%) }
+  body[data-theme="menthe"] header.top{ background:rgba(231,244,239,.72) }
+  body[data-theme="menthe"] .progress > i{ background:linear-gradient(90deg,#e6fff6,#a7ecd6) }
+  body[data-theme="menthe"] .hero{ background:linear-gradient(135deg,#1cc39a 0%,#12a684 48%,#0d7d68 100%); box-shadow:0 18px 44px rgba(15,120,95,.35) }
+  body[data-theme="menthe"] .hero::after{ background:radial-gradient(circle,rgba(160,255,224,.55),transparent 68%) }
+  body[data-theme="menthe"] .hero::before{ background:radial-gradient(circle,rgba(255,255,255,.18),transparent 70%) }
+  body[data-theme="menthe"] .auth-brand img, body[data-theme="menthe"] .brand .dot img{ filter:hue-rotate(115deg) saturate(1.1) }
+  /* ===== Thème Nuit (sombre) ===== */
+  body[data-theme="nuit"]{
+    --bg:#141329; --bg2:#1b1a37; --card:rgba(40,39,76,.55); --card-solid:#232242; --card2:#2c2b52;
+    --line:#33325f; --line2:#403e74;
+    --txt:#ece9ff; --muted:#a7a3d0; --muted2:#7f7ba8;
+    --primary:#7b8cff; --primary2:#a877ff; --primary-deep:#c3b3ff;
+    --green:#4ade80; --greenbg:#22323a;
+    --red:#ff6f6f; --amber:#f5b544; --teal:#57d8d0;
+    --glow:rgba(123,140,255,.45);
+    --shadow:0 14px 40px rgba(0,0,0,.55); --shadow-sm:0 4px 16px rgba(0,0,0,.4);
+    --glass:rgba(40,39,76,.5); --glass-2:rgba(46,45,88,.72); --glass-border:rgba(255,255,255,.12);
+    --sheen:inset 0 1px 0 rgba(255,255,255,.07);
+  }
+  body[data-theme="nuit"]::before{ background:radial-gradient(circle at 30% 30%,rgba(123,140,255,.4),rgba(168,119,255,.14) 60%,transparent 72%) }
+  body[data-theme="nuit"]::after{ background:radial-gradient(circle at 60% 40%,rgba(168,119,255,.32),rgba(123,140,255,.12) 55%,transparent 72%) }
+  body[data-theme="nuit"] header.top{ background:rgba(20,19,41,.72) }
+  body[data-theme="nuit"] .progress > i{ background:linear-gradient(90deg,#c9d0ff,#a877ff) }
+  body[data-theme="nuit"] .hero{ background:linear-gradient(135deg,#4a44b0 0%,#5a2fa6 48%,#382179 100%); box-shadow:0 18px 44px rgba(0,0,0,.5) }
+  body[data-theme="nuit"] .hero::after{ background:radial-gradient(circle,rgba(168,119,255,.5),transparent 68%) }
+  body[data-theme="nuit"] .hero::before{ background:radial-gradient(circle,rgba(255,255,255,.12),transparent 70%) }
+  body[data-theme="nuit"] .auth-brand img, body[data-theme="nuit"] .brand .dot img{ filter:hue-rotate(205deg) saturate(1.1) brightness(1.08) }
+  /* surfaces claires codées en dur → sombre */
+  body[data-theme="nuit"] input, body[data-theme="nuit"] select, body[data-theme="nuit"] textarea{
+    background:linear-gradient(160deg,rgba(54,53,96,.7),rgba(42,41,80,.6));
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.06), 0 2px 7px rgba(0,0,0,.3) }
+  body[data-theme="nuit"] .name-in{ background:none }
+  body[data-theme="nuit"] .modal{ background:linear-gradient(160deg,rgba(40,39,78,.92),rgba(32,31,64,.86)) }
+  body[data-theme="nuit"] .month-panel, body[data-theme="nuit"] .profile-dropdown{ background:linear-gradient(160deg,rgba(40,39,78,.94),rgba(30,29,60,.88)) }
+  body[data-theme="nuit"] .modal-bg{ background:rgba(0,0,0,.5) }
+  body[data-theme="nuit"] .mp-item:hover{ background:rgba(123,140,255,.16) }
+  body[data-theme="nuit"] .goal-sel{ background-image:linear-gradient(160deg,rgba(54,53,96,.7),rgba(42,41,80,.6)),url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23c3b3ff' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E") }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
   html,body{margin:0;padding:0}
   .ptr{position:fixed;top:0;left:0;right:0;display:flex;justify-content:center;pointer-events:none;z-index:70;opacity:0;transform:translateY(-16px);transition:opacity .2s}
@@ -622,8 +674,8 @@
         <div class="theme-row" id="themeRow">
           <div class="theme-opt" data-theme="jupiter" onclick="setTheme('jupiter')"><span class="theme-dot" style="background:linear-gradient(135deg,#f5952f,#c85a1c)"></span>Jupiter</div>
           <div class="theme-opt" data-theme="rose" onclick="setTheme('rose')"><span class="theme-dot" style="background:linear-gradient(135deg,#b45bd6,#e56fb0)"></span>Violet Rose</div>
-          <div class="theme-opt locked"><span class="theme-dot" style="background:linear-gradient(135deg,#5b7cfa,#8b5cf6)"></span>Nuit <span class="badge-soon">À venir</span></div>
-          <div class="theme-opt locked"><span class="theme-dot" style="background:linear-gradient(135deg,#34d399,#0d9488)"></span>Menthe <span class="badge-soon">À venir</span></div>
+          <div class="theme-opt" data-theme="nuit" onclick="setTheme('nuit')"><span class="theme-dot" style="background:linear-gradient(135deg,#5b7cfa,#8b5cf6)"></span>Nuit</div>
+          <div class="theme-opt" data-theme="menthe" onclick="setTheme('menthe')"><span class="theme-dot" style="background:linear-gradient(135deg,#34d399,#0d9488)"></span>Menthe</div>
         </div>
         <p class="sub" style="margin:12px 0 0">D'autres thèmes arriveront bientôt.</p>
       </div>
@@ -1166,13 +1218,15 @@ function render(){
   save();
 }
 
+function cssVar(name){ return getComputedStyle(document.body).getPropertyValue(name).trim() || "#000"; }
 function drawDonut(canvasId, data, centerSub){
   const total=data.reduce((a,d)=>a+(+d.val||0),0);
   const ctx=document.getElementById(canvasId).getContext("2d");
   ctx.clearRect(0,0,320,320);
   const cx=160,cy=160,r=130,ir=84;
+  const INK=cssVar('--txt'), MUT=cssVar('--muted'), LN=cssVar('--line2');
   if(total<=0){
-    ctx.strokeStyle="#e6d6bd";ctx.lineWidth=r-ir;ctx.beginPath();ctx.arc(cx,cy,(r+ir)/2,0,Math.PI*2);ctx.stroke();
+    ctx.strokeStyle=LN;ctx.lineWidth=r-ir;ctx.beginPath();ctx.arc(cx,cy,(r+ir)/2,0,Math.PI*2);ctx.stroke();
   } else {
     let a=-Math.PI/2;
     data.forEach(d=>{ const v=+d.val||0; if(v<=0) return; const ang=v/total*Math.PI*2;
@@ -1182,12 +1236,12 @@ function drawDonut(canvasId, data, centerSub){
     ctx.globalCompositeOperation="source-over";
   }
   const txt=fmt(total).replace(",00","");
-  ctx.fillStyle="#3d2c1c";ctx.textAlign="center";
+  ctx.fillStyle=INK;ctx.textAlign="center";
   let fs=30; ctx.font="800 "+fs+"px -apple-system,sans-serif";
   const maxW=2*ir-30, w=ctx.measureText(txt).width;
   if(w>maxW){ fs=Math.max(15,Math.floor(fs*maxW/w)); ctx.font="800 "+fs+"px -apple-system,sans-serif"; }
   ctx.fillText(txt,cx,cy-2);
-  ctx.font="600 17px -apple-system,sans-serif";ctx.fillStyle="#9c8a74";ctx.fillText(centerSub,cx,cy+24);
+  ctx.font="600 17px -apple-system,sans-serif";ctx.fillStyle=MUT;ctx.fillText(centerSub,cx,cy+24);
   return total;
 }
 function renderDonut(){
@@ -1598,12 +1652,12 @@ function drawLineChart(canvasId, labels, series){
   const all=series.flatMap(s=>s.vals); let mn=Math.min(0,...all), mx=Math.max(0,...all); if(mx===mn) mx=mn+1;
   const X=i=> labels.length<=1?padL+W/2 : padL+i*(W/(labels.length-1));
   const Y=v=> padT+H-((v-mn)/(mx-mn))*H;
-  ctx.strokeStyle="#e6d6bd"; ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(padL,Y(0)); ctx.lineTo(cssW-padR,Y(0)); ctx.stroke();
+  ctx.strokeStyle=cssVar('--line2'); ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(padL,Y(0)); ctx.lineTo(cssW-padR,Y(0)); ctx.stroke();
   series.forEach(s=>{ ctx.strokeStyle=s.color; ctx.lineWidth=2.5; ctx.lineJoin="round"; ctx.setLineDash(s.dashed?[6,5]:[]); ctx.beginPath();
     s.vals.forEach((v,i)=>{ const xx=X(i),yy=Y(v); i?ctx.lineTo(xx,yy):ctx.moveTo(xx,yy); }); ctx.stroke();
     ctx.setLineDash([]);
     if(!s.dashed){ ctx.fillStyle=s.color; s.vals.forEach((v,i)=>{ ctx.beginPath(); ctx.arc(X(i),Y(v),2.6,0,7); ctx.fill(); }); } });
-  ctx.fillStyle="#9c8a74"; ctx.font="600 11px -apple-system,sans-serif"; ctx.textAlign="center";
+  ctx.fillStyle=cssVar('--muted'); ctx.font="600 11px -apple-system,sans-serif"; ctx.textAlign="center";
   const step=Math.max(1,Math.ceil(labels.length/6));
   labels.forEach((lbl,i)=>{ if(labels.length>7 && (i%step!==0) && i!==labels.length-1) return; ctx.fillText(lbl, X(i), cssH-8); });
   return true;
@@ -1989,7 +2043,7 @@ const ICONS={
 function injectIcons(){ document.querySelectorAll("[data-ic]").forEach(el=>{ el.innerHTML=ICONS[el.dataset.ic]||""; }); }
 
 /* ============ THÈMES ============ */
-const THEME_COLOR={ jupiter:"#ec7a2c", rose:"#b45bd6" };
+const THEME_COLOR={ jupiter:"#ec7a2c", rose:"#b45bd6", nuit:"#141329", menthe:"#14b48a" };
 function applyTheme(name){
   name = THEME_COLOR[name] ? name : "jupiter";
   if(name==="jupiter") document.body.removeAttribute("data-theme");
