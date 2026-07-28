@@ -271,7 +271,8 @@
     background-image:linear-gradient(160deg,rgba(255,247,235,.72),rgba(247,233,214,.58)),url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23c85a1c' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
     background-repeat:no-repeat,no-repeat;background-position:center,right 11px center}
   .goal-actions{display:flex;flex-direction:column;gap:8px;margin-top:8px}
-  .goal-actions .btn.sm{width:100%;justify-content:flex-start;text-align:left}
+  .goal-actions .btn.sm{width:100%;display:flex;align-items:center;gap:9px;justify-content:flex-start;text-align:left}
+  .goal-actions .btn.sm svg{width:16px;height:16px;flex:none;stroke:currentColor}
   input:hover,select:hover,textarea:hover{cursor:pointer;border-color:rgba(255,255,255,.9);box-shadow:var(--sheen), 0 5px 14px rgba(160,110,60,.16)}
   input:focus,select:focus,textarea:focus{cursor:text;
     background:linear-gradient(160deg,rgba(255,248,237,.72),rgba(250,236,217,.55));border-color:var(--primary);
@@ -1405,9 +1406,9 @@ window.manageGoals=()=>{
           const remaining=(+a.goal||0)-(+a.balance||0);
           let dateBtn="";
           if(p.rate>0){ const months=Math.max(1,Math.ceil(remaining/p.rate)); const key=addMonthsKey(store.current,months);
-            dateBtn=`<button class="btn ghost sm" onclick="alignGoalDate('${a.id}')">📅 Repousser l'objectif à ${goalDateLabel(key)}</button>`; }
+            dateBtn=`<button class="btn ghost sm" onclick="alignGoalDate('${a.id}')">${IC_CAL}Repousser l'objectif à ${goalDateLabel(key)}</button>`; }
           hint+=`<small style="color:var(--amber);font-weight:700;display:block;margin-top:6px">⚠ Rythme insuffisant pour ${goalDateLabel(p.dateKey)}. Pour t'aligner :</small>`
-            +`<div class="goal-actions">${dateBtn}<button class="btn ghost sm" onclick="alignVersement('${a.id}')">💰 Épargner ${fmt(p.need)}/mois pour tenir la date</button></div>`;
+            +`<div class="goal-actions">${dateBtn}<button class="btn ghost sm" onclick="alignVersement('${a.id}')">${IC_COINS}Épargner ${fmt(p.need)}/mois pour tenir la date</button></div>`;
         }
       }
       else if(p.type==="rate") hint=`<small class="muted" style="display:block;margin-top:4px">≈ ${p.months} mois au rythme actuel</small>`;
@@ -1433,6 +1434,8 @@ window.manageGoals=()=>{
 };
 window.setGoalNow=(id,v)=>{ const a=findAcc(id); if(a){ a.goal=+v||0; save(); renderAccounts(); manageGoals(); } };
 window.setGoalDate=(id,v)=>{ const a=findAcc(id); if(a){ if(v) a.goalDate=v; else delete a.goalDate; save(); renderAccounts(); manageGoals(); } };
+const IC_CAL=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v4M16 2v4"/><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M3 10h18"/></svg>`;
+const IC_COINS=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="6"/><path d="M18.09 10.37A6 6 0 1 1 10.34 18"/><path d="M7 6h1v4"/><path d="m16.71 13.88.7.71-2.82 2.82"/></svg>`;
 const MOIS_FR=["janvier","février","mars","avril","mai","juin","juillet","août","septembre","octobre","novembre","décembre"];
 function monthOptions(sel){ return MOIS_FR.map((n,i)=>{ const v=String(i+1).padStart(2,"0"); return `<option value="${v}" ${v===sel?"selected":""}>${cap(n)}</option>`; }).join(""); }
 function yearOptions(sel){ const y0=+store.current.split("-")[0]; let o=""; for(let y=y0;y<=y0+15;y++){ o+=`<option value="${y}" ${String(y)===String(sel)?"selected":""}>${y}</option>`; } return o; }
@@ -1450,17 +1453,29 @@ window.alignGoalDate=id=>{
   a.goalDate=addMonthsKey(store.current,months);
   save(); render(); manageGoals(); toast("Date ajustée : "+goalDateLabel(a.goalDate)+" ✓");
 };
+function setMonthVersement(mo, id, name, need){
+  if(!mo) return;
+  if(!mo.savings) mo.savings=[];
+  const list=mo.savings.filter(s=>s.accountId===id);
+  const doneSum=list.filter(s=>s.done).reduce((x,s)=>x+(+s.actual||0),0); // déjà versé : on ne le retouche pas
+  const target=Math.max(0, round2(need-doneSum)); // ce qu'il reste à planifier
+  const editable=list.filter(s=>!s.done);
+  if(editable.length){ editable.forEach((s,i)=>{ s.planned = i===0?target:0; }); }
+  else if(target>0 || !list.length){ mo.savings.push({accountId:id, name, planned:target, actual:target, done:false, creditedAmount:0}); }
+}
 window.alignVersement=id=>{
   const a=findAcc(id); if(!a) return;
   const p=goalPlan(a); if(p.type!=="date") return;
-  const need=p.need;
-  const list=M().savings.filter(s=>s.accountId===id);
-  const doneSum=list.filter(s=>s.done).reduce((x,s)=>x+(+s.actual||0),0);
-  const target=Math.max(0, round2(need-doneSum)); // reste à planifier ce mois
-  const editable=list.filter(s=>!s.done);
-  if(editable.length){ editable.forEach((s,idx)=>{ s.planned = idx===0 ? target : 0; }); }
-  else { M().savings.push({accountId:id, name:a.name, planned:target, actual:target, done:false, creditedAmount:0}); }
-  save(); render(); manageGoals(); toast("Versement ajusté : "+fmt(need)+"/mois ✓");
+  const need=round2(p.need);
+  // Mois courant : compléter jusqu'au montant nécessaire (en tenant compte du déjà versé)
+  setMonthVersement(store.months[store.current], id, a.name, need);
+  // Mois suivants déjà créés : versement porté à ce niveau (les mois passés ne sont pas touchés)
+  Object.keys(store.months||{}).forEach(k=>{ if(k>store.current) setMonthVersement(store.months[k], id, a.name, need); });
+  // Base récurrente : les futurs mois pas encore créés démarreront à ce montant
+  const t=T();
+  const mine=(t.savings||[]).find(s=>s.accountId===id);
+  if(mine) mine.planned=need; else t.savings.push({accountId:id, name:a.name, planned:need});
+  save(); render(); manageGoals(); toast("Versement de "+fmt(need)+"/mois appliqué à ce mois et aux suivants ✓");
 };
 window.delAccount=id=>{
   const a=findAcc(id); if(!a) return;
