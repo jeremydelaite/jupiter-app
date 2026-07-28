@@ -1289,7 +1289,7 @@ window.manageGoals=()=>{
       <div class="ci" style="width:34px;height:34px;border-radius:11px;background:#dcefec;display:grid;place-items:center;flex:none">${BANK}</div>
       <div class="lname" style="flex:1;min-width:0">${escapeHtml(a.name)}</div>
       <input class="amt-in" type="number" step="0.01" inputmode="decimal" value="${a.goal||0}" onchange="setGoalNow('${a.id}',this.value)">
-    </div>`).join("") : '<div class="empty">Aucun compte épargne. Ajoute-en un d\\'abord.</div>'}
+    </div>`).join("") : '<div class="empty">Aucun compte épargne pour le moment.</div>'}
     <button class="btn" style="margin-top:16px" onclick="closeModal()">Terminé</button>`;
   document.getElementById("modalBg").classList.add("on"); document.body.style.overflow="hidden";
 };
