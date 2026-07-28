@@ -729,7 +729,7 @@ const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 const TURNSTILE_SITE_KEY = "0x4AAAAAAD6tnrhvgBARHF2v";
 const MIN_PW = 8; // longueur minimale du mot de passe
 let sb=null, currentUser=null, syncTimer=null, captchaToken=null, turnstileWidget=null;
-let cloudLoaded=false, lastPull=0;
+let cloudLoaded=false, lastPull=0, cloudUpdatedAt=null, lastPushedJSON="", conflictOpen=false;
 let turnstileReady=false, authShown=false;
 
 /* ============ DATA MODEL ============ */
@@ -921,8 +921,8 @@ function migrate(){
   if(store.template && store.template.income)
     store.template.income.forEach(x=>{ if(x.planned===undefined) x.planned=(+x.amount||0); if("amount" in x) delete x.amount; });
 }
-function save(){ localStorage.setItem(LS_KEY, JSON.stringify(store));
-  if(sb && currentUser && cloudLoaded){ clearTimeout(syncTimer); syncTimer=setTimeout(()=>{ syncTimer=null; pushCloud(); },900); } }
+function save(){ const s=JSON.stringify(store); localStorage.setItem(LS_KEY, s);
+  if(sb && currentUser && cloudLoaded && s!==lastPushedJSON){ clearTimeout(syncTimer); syncTimer=setTimeout(()=>{ syncTimer=null; pushCloud(); },900); } }
 function ensureMonth(key){
   if(!store.months[key]){ store.months[key]=emptyMonth(); }
   ensureReport(key);
@@ -936,6 +936,20 @@ function ensureReport(key){
     const r=monthLeftFor(store.months[pk]);
     mo.income.unshift({name:"Report du mois précédent", planned:r, actual:r, received:true, report:true});
   }
+}
+/* Recalcule les reports « du mois précédent » en chaîne, dans l'ordre chronologique.
+   Le tout premier mois (sans précédent) garde son solde initial éventuel. */
+function recomputeReports(){
+  const keys=Object.keys(store.months||{}).sort();
+  keys.forEach(k=>{
+    const mo=store.months[k]; if(!mo) return;
+    const pk=prevMonthKey(k);
+    if(!store.months[pk]) return;              // pas de mois précédent → on conserve un éventuel solde initial
+    const r=monthLeftFor(store.months[pk]);
+    const rep=(mo.income||[]).find(x=>x.report);
+    if(rep){ rep.planned=r; rep.actual=r; rep.received=true; }
+    else { if(!mo.income) mo.income=[]; mo.income.unshift({name:"Report du mois précédent", planned:r, actual:r, received:true, report:true}); }
+  });
 }
 function M(){ ensureMonth(store.current); return store.months[store.current]; }
 function T(){ if(!store.template) store.template={income:[],fixed:[],savings:[],budgets:{}};
@@ -1062,6 +1076,7 @@ function monthLeftFor(mo){
   return (+mo.startBalance||0)+rInc-aFix-tVar-aSav-aRep;
 }
 const cap = s => s.charAt(0).toUpperCase()+s.slice(1);
+function todayStr(){ const d=new Date(); return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
 function monthName(key){ const [y,m]=key.split("-").map(Number);
   return new Date(y,m-1,1).toLocaleDateString("fr-FR",{month:"long",year:"numeric"}); }
 function dayLabel(d){ if(!d) return "Sans date"; const s=new Date(d).toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long"}); return s.charAt(0).toUpperCase()+s.slice(1); }
@@ -1092,6 +1107,7 @@ function closeMonthPanel(){ const p=document.getElementById("monthPanel"); if(p)
 document.addEventListener("click",closeMonthPanel);
 window.pickMonth=(k)=>{ store.current=k; ensureMonth(k); closeMonthPanel(); render(); maybePromptBase(); };
 function render(){
+  recomputeReports();
   buildMonthList();
   const left=leftToSpend(), inc=plannedIncome();
   const la=document.getElementById("leftAmt");
@@ -1149,7 +1165,7 @@ function renderDonut(){
   const total=drawDonut("donut",data,"dépensé");
   const leg=document.getElementById("legend");
   if(!data.length){ leg.innerHTML='<div class="muted">Aucune dépense enregistrée.</div>'; return;}
-  leg.innerHTML=data.map(d=>`<div class="li">${catIcon(d,16)} ${d.name}<span class="lp">${(d.val/total*100).toFixed(1)}%</span></div>`).join("");
+  leg.innerHTML=data.map(d=>`<div class="li">${catIcon(d,16)} ${escapeHtml(d.name)}<span class="lp">${(d.val/total*100).toFixed(1)}%</span></div>`).join("");
 }
 function renderBudgetDonut(){
   const data=[
@@ -1175,7 +1191,7 @@ function renderCatProgress(){
     const over=c.b>0&&c.s>c.b;
     return `<div class="catrow">
       <div class="ci" style="background:${c.color}22;color:${c.color}">${catIcon(c)}</div>
-      <div style="flex:1;min-width:0"><div class="cname">${c.name}</div>
+      <div style="flex:1;min-width:0"><div class="cname">${escapeHtml(c.name)}</div>
         <div class="cbar"><i style="width:${pct}%;background:${over?'var(--red)':c.color}"></i></div></div>
       <div class="cright"><b class="${over?'over':''}">${fmt(c.s)}</b><small>sur ${fmt(c.b)}</small></div>
     </div>`;
@@ -1183,7 +1199,9 @@ function renderCatProgress(){
 }
 
 function renderRecent(){
-  const list=[...M().tx].slice(-5).reverse();
+  const list=M().tx.map((t,i)=>({t,i}))
+    .sort((a,b)=>{ if((a.t.date||"")!==(b.t.date||"")) return (a.t.date||"")<(b.t.date||"")?1:-1; return b.i-a.i; })
+    .slice(0,5).map(x=>x.t);
   const el=document.getElementById("recentTx");
   el.innerHTML=list.length?list.map(t=>txRow(t,false)).join(""):'<div class="empty">Aucune dépense. Appuie sur + pour en ajouter une.</div>';
 }
@@ -1191,8 +1209,8 @@ function renderRecent(){
 let txFilterCat="all";
 function renderTx(){
   const chips=[{id:"all",name:"Tout"}].concat(allCats());
-  document.getElementById("txFilter").innerHTML=chips.map(c=>`<div class="chip ${txFilterCat===c.id?'sel':''}" onclick="setTxFilter('${c.id}')"><span class="e">${catIcon(c,16)}</span>${c.name}</div>`).join("");
-  document.getElementById("txFilterSel").innerHTML=chips.map(c=>`<option value="${c.id}" ${txFilterCat===c.id?'selected':''}>${c.name}</option>`).join("");
+  document.getElementById("txFilter").innerHTML=chips.map(c=>`<div class="chip ${txFilterCat===c.id?'sel':''}" onclick="setTxFilter('${c.id}')"><span class="e">${catIcon(c,16)}</span>${escapeHtml(c.name)}</div>`).join("");
+  document.getElementById("txFilterSel").innerHTML=chips.map(c=>`<option value="${c.id}" ${txFilterCat===c.id?'selected':''}>${escapeHtml(c.name)}</option>`).join("");
   let list=M().tx.map((t,i)=>({...t,i}));
   if(txFilterCat!=="all") list=list.filter(t=>t.cat===txFilterCat);
   document.getElementById("txCount").textContent=`${list.length} dépense(s) · ${fmt(list.reduce((a,t)=>a+(+t.amount||0),0))}`;
@@ -1838,7 +1856,7 @@ function openAdd(type,editIdx){
   if(type==="expense"){
     const ed = editTxIndex!=null ? M().tx[editTxIndex] : null;
     addCat = ed ? ed.cat : "courses";
-    document.getElementById("mDate").value = ed ? ed.date : new Date().toISOString().slice(0,10);
+    document.getElementById("mDate").value = ed ? ed.date : todayStr();
     if(ed){ document.getElementById("mAmt").value=ed.amount; document.getElementById("mNote").value=ed.note||""; }
     renderModalCats(); setTimeout(()=>document.getElementById("mAmt").focus(),100);
   } else if(type==="save"||type==="repay"){ setTimeout(()=>document.getElementById("mAmt").focus(),100); }
@@ -1846,8 +1864,8 @@ function openAdd(type,editIdx){
   document.getElementById("modalBg").classList.add("on"); document.body.style.overflow="hidden";
 }
 function renderModalCats(){
-  document.getElementById("mCats").innerHTML=allCats().map(c=>`<div class="chip ${addCat===c.id?'sel':''}" onclick="pickCat('${c.id}')"><span class="e">${catIcon(c,16)}</span>${c.name}</div>`).join("");
-  const sel=document.getElementById("mCatsSel"); if(sel) sel.innerHTML=allCats().map(c=>`<option value="${c.id}" ${addCat===c.id?'selected':''}>${c.name}</option>`).join("");
+  document.getElementById("mCats").innerHTML=allCats().map(c=>`<div class="chip ${addCat===c.id?'sel':''}" onclick="pickCat('${c.id}')"><span class="e">${catIcon(c,16)}</span>${escapeHtml(c.name)}</div>`).join("");
+  const sel=document.getElementById("mCatsSel"); if(sel) sel.innerHTML=allCats().map(c=>`<option value="${c.id}" ${addCat===c.id?'selected':''}>${escapeHtml(c.name)}</option>`).join("");
 }
 window.pickCat=id=>{addCat=id;renderModalCats();};
 window.closeModal=()=>{ document.getElementById("modalBg").classList.remove("on"); document.body.style.overflow=""; editTxIndex=null; editCatId=null; };
@@ -1857,7 +1875,7 @@ window.saveExpense=()=>{
   const amt=parseFloat(document.getElementById("mAmt").value);
   if(!amt||amt<=0){toast("Entre un montant valide",true);return;}
   const note=document.getElementById("mNote").value.trim();
-  const date=document.getElementById("mDate").value||new Date().toISOString().slice(0,10);
+  const date=document.getElementById("mDate").value||todayStr();
   if(editTxIndex!=null){
     const t=M().tx[editTxIndex]; if(t){ t.cat=addCat; t.amount=amt; t.note=note; t.date=date; }
     editTxIndex=null; closeModal(); render(); toast("Dépense modifiée ✓"); return;
@@ -1952,18 +1970,52 @@ function initSupabase(){
 }
 async function pullCloud(){
   try{
-    const {data,error}=await sb.from('jupiter_data').select('data').eq('user_id',currentUser.id).maybeSingle();
+    const {data,error}=await sb.from('jupiter_data').select('data, updated_at').eq('user_id',currentUser.id).maybeSingle();
     if(error) throw error;
-    if(data && data.data){ store=data.data; migrate(); localStorage.setItem(LS_KEY,JSON.stringify(store)); cloudLoaded=true; }
+    if(data && data.data){
+      store=data.data; migrate();
+      lastPushedJSON=JSON.stringify(store); localStorage.setItem(LS_KEY,lastPushedJSON);
+      cloudUpdatedAt=data.updated_at||null; cloudLoaded=true;
+    }
     else { cloudLoaded=true; await pushCloud(); }   // 1ère connexion : on envoie les données locales actuelles
     lastPull=Date.now();
   }catch(e){ console.warn("pull",e); toast("Synchro indisponible, mode local",true); }
 }
 async function pushCloud(){
   if(!sb || !currentUser) return;
-  try{ await sb.from('jupiter_data').upsert({user_id:currentUser.id, data:store, updated_at:new Date().toISOString()},{onConflict:'user_id'}); }
-  catch(e){ console.warn("push",e); }
+  try{
+    // Garde anti-écrasement : si le cloud a changé depuis notre dernier chargement (autre appareil), on n'écrase pas.
+    const {data:remote}=await sb.from('jupiter_data').select('updated_at').eq('user_id',currentUser.id).maybeSingle();
+    if(remote && remote.updated_at && cloudUpdatedAt &&
+       new Date(remote.updated_at).getTime() > new Date(cloudUpdatedAt).getTime()){
+      cloudConflict(remote.updated_at); return;
+    }
+    const now=new Date().toISOString();
+    const {error}=await sb.from('jupiter_data').upsert({user_id:currentUser.id, data:store, updated_at:now},{onConflict:'user_id'});
+    if(error) throw error;
+    cloudUpdatedAt=now; lastPushedJSON=JSON.stringify(store);
+  }catch(e){ console.warn("push",e); }
 }
+function cloudConflict(remoteUpdatedAt){
+  if(conflictOpen) return; conflictOpen=true;
+  const box=document.getElementById("modalBox");
+  box.innerHTML=`<button class="mclose" onclick="closeCloudConflict()">✕</button>
+    <h3>Conflit de synchronisation</h3>
+    <p class="sub" style="margin-bottom:18px">Tes données ont été modifiées sur un autre appareil depuis ta dernière synchro. Que veux-tu faire ?</p>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <button class="btn" onclick="resolveCloud('reload')">Recharger la version du cloud</button>
+      <button class="btn ghost" onclick="resolveCloud('keep')">Garder ma version (écraser le cloud)</button>
+    </div>
+    <p class="sub" style="margin-top:14px;font-size:12px">Recharger remplacera tes changements non synchronisés ici. Garder ma version écrasera ceux de l'autre appareil.</p>`;
+  document.getElementById("modalBg").classList.add("on"); document.body.style.overflow="hidden";
+  cloudConflict._remote=remoteUpdatedAt;
+}
+window.closeCloudConflict=()=>{ conflictOpen=false; closeModal(); };
+window.resolveCloud=async(choice)=>{
+  conflictOpen=false; closeModal();
+  if(choice==="reload"){ await pullCloud(); render(); toast("Version du cloud rechargée ✓"); }
+  else { cloudUpdatedAt=cloudConflict._remote||new Date().toISOString(); await pushCloud(); toast("Ta version a été envoyée ✓"); }
+};
 function showAuth(){ document.getElementById("authOverlay").classList.add("show"); document.body.style.overflow="hidden"; }
 function showApp(){
   document.getElementById("authOverlay").classList.remove("show"); document.body.style.overflow="";
@@ -2103,7 +2155,7 @@ function layoutFab(){
 }
 window.addEventListener("load",layoutFab);
 window.addEventListener("resize",layoutFab);
-window.addEventListener("resize",()=>renderTrends());
+window.addEventListener("resize",()=>{ renderTrends(); renderSavHistory(); });
 /* Plafonne toute saisie numérique à moins d'un milliard */
 document.addEventListener("input",e=>{ const t=e.target; if(t && t.matches && t.matches('input[type=number]')){ const v=parseFloat(t.value); if(!isNaN(v) && v>MAXV) t.value=MAXV; } });
 layoutFab();
