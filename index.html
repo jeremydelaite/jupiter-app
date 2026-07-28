@@ -511,6 +511,7 @@
       <div class="section-h"><h3>Épargne</h3></div>
       <div class="toolbar"><button class="btn ghost sm" onclick="addAccount('epargne')">+ Ajouter un compte</button></div>
       <div class="card" id="accountList"></div>
+      <div class="toolbar" style="margin-top:12px"><button class="btn ghost sm" onclick="manageGoals()"><i class="bic" data-ic="target"></i>Gérer les objectifs</button></div>
 
       <div class="section-h"><h3>Versements du mois</h3><span class="muted" id="saveSum" style="font-size:13px;font-weight:600"></span></div>
       <div class="toolbar"><button class="btn ghost sm" onclick="openAdd('save')">+ Ajouter un versement</button></div>
@@ -1163,7 +1164,6 @@ function renderAccounts(){
     <div style="width:36px;flex:none"></div><div style="flex:1"></div>
     <div class="fx-amts">
       <div class="acc-col" style="text-align:right"><span class="mini-lbl" style="margin:0">Réel</span></div>
-      <div class="acc-col" style="text-align:right"><span class="mini-lbl" style="margin:0">Objectif</span></div>
     </div><div style="width:26px;flex:none"></div></div>`;
   let hs = sav.length ? headerS + sav.map(a=>{
     const p=monthsToGoal(a);
@@ -1180,7 +1180,6 @@ function renderAccounts(){
       </div>
       <div class="fx-amts">
         <div><input class="amt-in" type="number" step="0.01" inputmode="decimal" value="${a.balance}" data-kind="accbal" data-id="${a.id}"></div>
-        <div><input class="amt-in" type="number" step="0.01" inputmode="decimal" value="${a.goal||0}" data-kind="accgoal" data-id="${a.id}"></div>
       </div>
       <button class="del" onclick="delAccount('${a.id}')">${TRASH}</button>
     </div>`;
@@ -1281,6 +1280,20 @@ window.saveAccount=(type)=>{
 };
 function isCredType(t){ return t==="credit"; }
 window.setAccountBalance=(id,v)=>{ const a=findAcc(id); if(a){ a.balance=+v||0; save(); renderAccounts(); } };
+window.manageGoals=()=>{
+  const accs=(store.accounts||[]).filter(a=>(a.type||"epargne")!=="credit");
+  const box=document.getElementById("modalBox");
+  box.innerHTML=`<button class="mclose" onclick="closeModal()">✕</button>
+    <h3>Objectifs d'épargne</h3><p class="sub">Définis un montant à atteindre pour chaque compte.</p>
+    ${accs.length ? accs.map(a=>`<div class="lrow">
+      <div class="ci" style="width:34px;height:34px;border-radius:11px;background:#dcefec;display:grid;place-items:center;flex:none">${BANK}</div>
+      <div class="lname" style="flex:1;min-width:0">${escapeHtml(a.name)}</div>
+      <input class="amt-in" type="number" step="0.01" inputmode="decimal" value="${a.goal||0}" onchange="setGoalNow('${a.id}',this.value)">
+    </div>`).join("") : '<div class="empty">Aucun compte épargne. Ajoute-en un d\\'abord.</div>'}
+    <button class="btn" style="margin-top:16px" onclick="closeModal()">Terminé</button>`;
+  document.getElementById("modalBg").classList.add("on"); document.body.style.overflow="hidden";
+};
+window.setGoalNow=(id,v)=>{ const a=findAcc(id); if(a){ a.goal=+v||0; save(); renderAccounts(); } };
 window.delAccount=id=>{
   const a=findAcc(id); if(!a) return;
   confirmDialog("Supprimer le compte « "+a.name+" » ? Son solde suivi et ses versements associés seront supprimés.",()=>{
@@ -1569,6 +1582,7 @@ const ICONS={
   budget:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12c.552 0 1.005-.449.95-.998a10 10 0 0 0-8.953-8.951c-.55-.055-.998.398-.998.95v8a1 1 0 0 0 1 1z"/><path d="M21.21 15.89A10 10 0 1 1 8 2.83"/></svg>`,
   savecheck:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M12.5 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h10.2a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4v4.35"/><path d="m16 19 2 2 4-4"/><path d="M17 15.13V14a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7"/><path d="M7 3v4a1 1 0 0 0 1 1h7"/></svg>`,
   download:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V3"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/></svg>`,
+  target:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>`,
   manage:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><line x1="21" x2="14" y1="4" y2="4"/><line x1="10" x2="3" y1="4" y2="4"/><line x1="21" x2="12" y1="12" y2="12"/><line x1="8" x2="3" y1="12" y2="12"/><line x1="21" x2="16" y1="20" y2="20"/><line x1="12" x2="3" y1="20" y2="20"/><line x1="14" x2="14" y1="2" y2="6"/><line x1="8" x2="8" y1="10" y2="14"/><line x1="16" x2="16" y1="18" y2="22"/></svg>`,
   account:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>`,
   logout:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg>`,
