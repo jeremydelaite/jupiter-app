@@ -588,7 +588,7 @@
           <div class="pw-wrap"><input id="accPw2" type="password" autocomplete="new-password"><button type="button" class="pw-eye" onclick="togglePw('accPw2',this)" aria-label="Afficher/masquer"></button></div></div>
         <div class="sub" style="font-size:12px;margin:-4px 0 10px">Min. 8 caractères, avec majuscule, minuscule et chiffre.</div>
         <div id="accPwErr" class="auth-err"></div>
-        <button class="btn" onclick="changePassword()">Mettre à jour le mot de passe</button>
+        <button class="btn" onclick="changePassword(this)">Mettre à jour le mot de passe</button>
       </div>
 
       <div class="section-h"><h3>Apparence</h3></div>
@@ -1017,14 +1017,6 @@ function actualFixed(){ return M().fixed.reduce((a,f)=>a+(f.paid?(+f.actual||0):
 function plannedFixed(){ return sum(M().fixed,"planned"); }
 function actualSavings(){ return M().savings.reduce((a,s)=>a+(s.done?(+s.actual||0):0),0); }
 function monthlyForAccount(id){ return M().savings.filter(s=>s.accountId===id).reduce((a,s)=>a+(s.done?(+s.actual||0):(+s.planned||0)),0); }
-function monthsToGoal(acc){
-  const goal=+acc.goal||0, bal=+acc.balance||0;
-  if(goal<=0) return null;
-  if(bal>=goal) return {done:true};
-  const m=monthlyForAccount(acc.id);
-  if(m<=0) return {noRate:true};
-  return {months:Math.ceil((goal-bal)/m), rate:m};
-}
 function monthsUntil(key){ // nb de mois entre le mois courant et key (>=1 si futur)
   const [y1,m1]=store.current.split("-").map(Number);
   const [y2,m2]=key.split("-").map(Number);
@@ -1106,9 +1098,8 @@ window.toggleMonthPanel=(e)=>{ if(e) e.stopPropagation();
 function closeMonthPanel(){ const p=document.getElementById("monthPanel"); if(p) p.classList.remove("open"); }
 document.addEventListener("click",closeMonthPanel);
 window.pickMonth=(k)=>{ store.current=k; ensureMonth(k); closeMonthPanel(); render(); maybePromptBase(); };
-function render(){
-  recomputeReports();
-  buildMonthList();
+let activeView="dash";
+function renderDash(){
   const left=leftToSpend(), inc=plannedIncome();
   const la=document.getElementById("leftAmt");
   la.textContent=fmt(left);
@@ -1131,7 +1122,15 @@ function render(){
   document.getElementById("sSave").innerHTML=fmt(actualSavings())+` <small>/ ${fmt(plannedSavings())}</small>`;
 
   renderDonut(); renderBudgetDonut(); renderCatProgress(); renderRecent();
-  renderTx(); renderFixed(); renderIncome(); renderAccounts(); renderSave(); renderRepay(); renderBudget(); renderBase(); renderTrends();
+}
+function renderSaveView(){ renderAccounts(); renderSave(); renderRepay(); }
+// Ne recalcule que le tableau de bord + la vue actuellement affichée (perf, surtout sur mobile).
+const VIEW_RENDER={ dash:renderDash, tx:renderTx, income:renderIncome, fixed:renderFixed,
+  budget:renderBudget, save:renderSaveView, setbase:renderBase, trends:renderTrends, account:()=>{} };
+function render(){
+  recomputeReports();
+  buildMonthList();
+  (VIEW_RENDER[activeView]||renderDash)();
   save();
 }
 
@@ -1252,13 +1251,12 @@ function renderFixed(){
   </div>`).join("") : '<div class="empty">Aucune charge fixe.</div>';
 }
 window.toggleFixed=i=>{ const fx=M().fixed[i]; fx.paid=!fx.paid; if(fx.paid) fx.actual=fx.planned; render(); };
-window.setFixed=(i,field,v)=>{ M().fixed[i][field]=+v||0; render(); };
 
 function renderIncome(){
   document.getElementById("incomeSum").innerHTML=`Reçu <b>${fmt(realIncome())}</b> / prévu ${fmt(plannedIncome())} — coche un revenu quand il est encaissé.`;
   const inc=M().income;
   document.getElementById("incomeList").innerHTML = inc.length ? inc.map((x,i)=>`<div class="lrow">
-    <div class="chk ${x.received?'on':''}" onclick="toggleIncome(${i})" title="Cocher quand le revenu est reçu">✓</div>
+    <div class="chk ${x.received?'on':''}" ${x.report?'style="pointer-events:none;opacity:.6" title="Report automatique du mois précédent"':`onclick="toggleIncome(${i})" title="Cocher quand le revenu est reçu"`}>✓</div>
     <input class="name-in" type="text" value="${escapeHtml(x.name)}" data-kind="incomename" data-i="${i}">
     <div class="fx-amts">
       <div><span class="amt-lbl" style="color:${x.received?'var(--green)':'var(--muted)'}">${x.received?'Reçu':'Prévu'}</span>
@@ -1351,7 +1349,6 @@ function renderSave(){
   renderSavHistory();
 }
 window.toggleSave=i=>{ const s=M().savings[i]; s.done=!s.done; if(s.done) s.actual=s.planned; applyCredit(s); render(); };
-window.setSaving=(i,field,v)=>{ const s=M().savings[i]; s[field]=+v||0; applyCredit(s); render(); };
 
 function applyRepay(c){
   const want = c.done ? (+c.actual||0) : 0;
@@ -1380,7 +1377,6 @@ function renderRepay(){
   }).join("") : '<div class="empty">Aucun remboursement ce mois.</div>';
 }
 window.toggleRepay=i=>{ const c=M().credits[i]; c.done=!c.done; if(c.done) c.actual=c.planned; applyRepay(c); render(); };
-window.setAccountGoal=(id,v)=>{ const a=findAcc(id); if(a){ a.goal=+v||0; save(); renderAccounts(); } };
 
 /* comptes d'épargne */
 window.addAccount=(type)=>{
@@ -1408,7 +1404,6 @@ window.saveAccount=(type)=>{
   closeModal(); render(); toast(isCredType(type)?"Crédit ajouté ✓":"Compte ajouté ✓");
 };
 function isCredType(t){ return t==="credit"; }
-window.setAccountBalance=(id,v)=>{ const a=findAcc(id); if(a){ a.balance=+v||0; save(); renderAccounts(); } };
 window.manageGoals=()=>{
   const accs=(store.accounts||[]).filter(a=>(a.type||"epargne")!=="credit");
   const box=document.getElementById("modalBox");
@@ -1781,8 +1776,10 @@ let lastManage="income";
 function go(view){
   if(view==="manage") view=lastManage;
   if(MANAGE.includes(view)) lastManage=view;
+  activeView=view;
   document.querySelectorAll(".view").forEach(v=>v.classList.remove("active"));
   document.getElementById("v-"+view).classList.add("active");
+  render();   // rend la vue désormais visible (les vues cachées ne sont pas recalculées)
   document.querySelectorAll("[data-nav]").forEach(a=>{
     const d=a.dataset.nav;
     a.classList.toggle("active", d===view || (d==="manage" && MANAGE.includes(view)));
@@ -2071,14 +2068,14 @@ window.authSubmit=async()=>{
 window.toggleProfileMenu=(e)=>{ if(e) e.stopPropagation(); document.getElementById("profileDropdown").classList.toggle("open"); };
 document.addEventListener("click",()=>{ const d=document.getElementById("profileDropdown"); if(d) d.classList.remove("open"); });
 window.openAccount=()=>{ const d=document.getElementById("profileDropdown"); if(d) d.classList.remove("open"); go("account"); };
-window.changePassword=async()=>{
+window.changePassword=async(btn)=>{
   const p1=document.getElementById("accPw").value, p2=document.getElementById("accPw2").value;
   const err=document.getElementById("accPwErr"); err.style.color="var(--red)";
   if(p1.length<MIN_PW){ err.textContent=`Mot de passe : ${MIN_PW} caractères minimum.`; return; }
   if(!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(p1)){ err.textContent="Il faut une minuscule, une majuscule et un chiffre."; return; }
   if(p1!==p2){ err.textContent="Les mots de passe ne correspondent pas."; return; }
   if(!sb || !currentUser){ err.textContent="Non connecté."; return; }
-  const btn=event&&event.target; if(btn){ btn.disabled=true; }
+  if(btn){ btn.disabled=true; }
   try{
     const {error}=await sb.auth.updateUser({password:p1});
     if(error) throw error;
@@ -2099,17 +2096,17 @@ window.deleteAccount=()=>{
     <div id="delErr" class="auth-err"></div>
     <div style="display:flex;gap:10px">
       <button class="btn ghost" onclick="closeModal()">Annuler</button>
-      <button class="btn danger" onclick="confirmDeleteAccount()">Supprimer définitivement</button>
+      <button class="btn danger" onclick="confirmDeleteAccount(this)">Supprimer définitivement</button>
     </div>`;
   const eye=box.querySelector(".pw-eye"); if(eye) eye.innerHTML=EYE;
   setTimeout(()=>document.getElementById("delPw").focus(),100);
   document.getElementById("modalBg").classList.add("on"); document.body.style.overflow="hidden";
 };
-window.confirmDeleteAccount=async()=>{
+window.confirmDeleteAccount=async(btn)=>{
   const pw=document.getElementById("delPw").value;
   const err=document.getElementById("delErr"); err.style.color="var(--red)";
   if(!pw){ err.textContent="Entre ton mot de passe."; return; }
-  const btn=event && event.target; if(btn) btn.disabled=true;
+  if(btn) btn.disabled=true;
   try{
     const {data,error}=await sb.rpc('delete_account',{pwd:pw});
     if(error) throw error;
@@ -2155,7 +2152,8 @@ function layoutFab(){
 }
 window.addEventListener("load",layoutFab);
 window.addEventListener("resize",layoutFab);
-window.addEventListener("resize",()=>{ renderTrends(); renderSavHistory(); });
+let resizeT;
+window.addEventListener("resize",()=>{ clearTimeout(resizeT); resizeT=setTimeout(()=>{ renderTrends(); renderSavHistory(); },150); });
 /* Plafonne toute saisie numérique à moins d'un milliard */
 document.addEventListener("input",e=>{ const t=e.target; if(t && t.matches && t.matches('input[type=number]')){ const v=parseFloat(t.value); if(!isNaN(v) && v>MAXV) t.value=MAXV; } });
 layoutFab();
