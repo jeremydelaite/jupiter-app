@@ -1055,7 +1055,8 @@ function render(){
     `${d.remaining} jour${d.remaining>1?"s":""} restants · ${fmt(perDay)}/jour`;
   const spentTotal = actualFixed()+totalVar()+actualSavings();
   const pct = inc>0 ? Math.min(100, spentTotal/inc*100) : 0;
-  document.getElementById("heroBar").style.width=pct+"%";
+  const heroBar=document.getElementById("heroBar");
+  requestAnimationFrame(()=>{ heroBar.style.width=pct+"%"; });
   const fa=document.getElementById("foreAmt"); fa.textContent=fmt(forecastLeft());
   fa.style.color = forecastLeft()<0 ? "#fff2ec" : "#fff";
 
@@ -1095,7 +1096,7 @@ function drawDonut(canvasId, data, centerSub){
 }
 function renderDonut(){
   const spent=spentByCat();
-  const data=allCats().map(c=>({id:c.id,name:c.name,color:c.color,icon:c.icon,val:spent[c.id]})).filter(d=>d.val>0).sort((a,b)=>b.val-a.val);
+  const data=allCatsFull().map(c=>({id:c.id,name:c.name,color:c.color,icon:c.icon,val:spent[c.id]})).filter(d=>d.val>0).sort((a,b)=>b.val-a.val);
   const total=drawDonut("donut",data,"dépensé");
   const leg=document.getElementById("legend");
   if(!data.length){ leg.innerHTML='<div class="muted">Aucune dépense enregistrée.</div>'; return;}
@@ -1117,7 +1118,7 @@ function renderBudgetDonut(){
 
 function renderCatProgress(){
   const spent=spentByCat();
-  const rows=allCats().map(c=>({...c,b:+M().budgets[c.id]||0,s:spent[c.id]})).filter(c=>c.b>0||c.s>0).sort((a,b)=>b.s-a.s);
+  const rows=allCatsFull().map(c=>({...c,b:+M().budgets[c.id]||0,s:spent[c.id]})).filter(c=>c.b>0||c.s>0).sort((a,b)=>b.s-a.s);
   const el=document.getElementById("catProgress");
   if(!rows.length){el.innerHTML='<div class="empty">Aucun budget défini.</div>';return;}
   el.innerHTML=rows.map(c=>{
@@ -1381,7 +1382,7 @@ function renderBudget(){
   </div>`;}).join("");
   const hid=(store.hiddenCats||[]); const hbox=document.getElementById("hiddenCatsBox");
   if(hbox){
-    const list=CATS.filter(c=>hid.includes(c.id));
+    const list=allCatsFull().filter(c=>hid.includes(c.id));
     hbox.innerHTML = list.length ? `<div class="section-h"><h3>Catégories masquées</h3></div><div class="card">`+
       list.map(c=>`<div class="lrow"><div class="ci" style="width:34px;height:34px;border-radius:11px;background:${c.color}22;display:grid;place-items:center;flex:none">${catIcon(c,18)}</div><div class="lname" style="flex:1;opacity:.7">${c.name}</div><button class="btn ghost sm" onclick="unhideCategory('${c.id}')">Réafficher</button></div>`).join("")+`</div>` : "";
   }
@@ -1517,12 +1518,22 @@ window.hideCategory=id=>{
 window.unhideCategory=id=>{ store.hiddenCats=(store.hiddenCats||[]).filter(x=>x!==id); save(); render(); toast("Catégorie réaffichée ✓"); };
 window.delCategory=id=>{
   const c=catById(id);
-  confirmDialog("Supprimer la catégorie « "+(c?c.name:"")+" » ? Les dépenses de cette catégorie seront reclassées en « Autre ».",()=>{
-    store.customCats=(store.customCats||[]).filter(x=>x.id!==id);
-    Object.values(store.months||{}).forEach(mo=>{ (mo.tx||[]).forEach(t=>{ if(t.cat===id) t.cat="autre"; }); if(mo.budgets) delete mo.budgets[id]; });
-    if(store.template && store.template.budgets) delete store.template.budgets[id];
-    save(); render(); toast("Catégorie supprimée");
-  });
+  const used=Object.values(store.months||{}).some(mo=>(mo.tx||[]).some(t=>t.cat===id));
+  if(used){
+    confirmDialog("La catégorie « "+(c?c.name:"")+" » contient déjà des dépenses. Elle sera masquée — les dépenses passées restent visibles dans leur mois, et tu pourras la réafficher en bas des budgets.",()=>{
+      if(!store.hiddenCats) store.hiddenCats=[];
+      if(!store.hiddenCats.includes(id)) store.hiddenCats.push(id);
+      save(); render(); toast("Catégorie masquée");
+    },"Masquer",false);
+  } else {
+    confirmDialog("Supprimer définitivement la catégorie « "+(c?c.name:"")+" » ?",()=>{
+      store.customCats=(store.customCats||[]).filter(x=>x.id!==id);
+      Object.values(store.months||{}).forEach(mo=>{ if(mo.budgets) delete mo.budgets[id]; });
+      if(store.template && store.template.budgets) delete store.template.budgets[id];
+      store.hiddenCats=(store.hiddenCats||[]).filter(x=>x!==id);
+      save(); render(); toast("Catégorie supprimée");
+    });
+  }
 };
 
 /* ---- Page « Définir la base » (édite le modèle récurrent) ---- */
