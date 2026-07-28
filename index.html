@@ -38,6 +38,24 @@
     --font:'Inter',-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
     --font-display:'Space Grotesk',var(--font);
   }
+  /* ===== Thème Violet-Rose ===== */
+  body[data-theme="rose"]{
+    --bg:#f4ecf8; --bg2:#fdf7fc; --card:rgba(255,252,255,.72); --card-solid:#fffbff; --card2:#efe1f3;
+    --line:#e7d5ee; --line2:#dbc2e6;
+    --txt:#3a2942; --muted:#9a83a8; --muted2:#b7a3c6;
+    --primary:#b45bd6; --primary2:#e56fb0; --primary-deep:#8e3fb0;
+    --green:#6fae3d; --greenbg:#eef4df;
+    --red:#e0517f; --amber:#e59b3a; --teal:#8f5bd0;
+    --glow:rgba(180,91,214,.32);
+    --shadow:0 10px 34px rgba(120,55,150,.16);
+    --shadow-sm:0 4px 16px rgba(120,55,150,.12);
+    --glass:rgba(255,252,255,.52); --glass-2:rgba(255,250,255,.74); --glass-border:rgba(255,255,255,.72);
+    --sheen:inset 0 1px 0 rgba(255,255,255,.7);
+  }
+  body[data-theme="rose"]::before{ background:radial-gradient(circle at 30% 30%,rgba(229,111,176,.5),rgba(180,91,214,.16) 60%,transparent 72%) }
+  body[data-theme="rose"]::after{ background:radial-gradient(circle at 60% 40%,rgba(142,63,176,.32),rgba(229,111,176,.13) 55%,transparent 72%) }
+  body[data-theme="rose"] header.top{ background:rgba(244,236,248,.72) }
+  body[data-theme="rose"] .progress > i{ background:linear-gradient(90deg,#fdeaff,#f3b9e0) }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
   html,body{margin:0;padding:0}
   .ptr{position:fixed;top:0;left:0;right:0;display:flex;justify-content:center;pointer-events:none;z-index:70;opacity:0;transform:translateY(-16px);transition:opacity .2s}
@@ -593,8 +611,9 @@
 
       <div class="section-h"><h3>Apparence</h3></div>
       <div class="card">
-        <div class="theme-row">
-          <div class="theme-opt active"><span class="theme-dot" style="background:linear-gradient(135deg,#f5952f,#c85a1c)"></span>Jupiter <span class="badge-on">Actuel</span></div>
+        <div class="theme-row" id="themeRow">
+          <div class="theme-opt" data-theme="jupiter" onclick="setTheme('jupiter')"><span class="theme-dot" style="background:linear-gradient(135deg,#f5952f,#c85a1c)"></span>Jupiter</div>
+          <div class="theme-opt" data-theme="rose" onclick="setTheme('rose')"><span class="theme-dot" style="background:linear-gradient(135deg,#b45bd6,#e56fb0)"></span>Violet Rose</div>
           <div class="theme-opt locked"><span class="theme-dot" style="background:linear-gradient(135deg,#5b7cfa,#8b5cf6)"></span>Nuit <span class="badge-soon">À venir</span></div>
           <div class="theme-opt locked"><span class="theme-dot" style="background:linear-gradient(135deg,#34d399,#0d9488)"></span>Menthe <span class="badge-soon">À venir</span></div>
         </div>
@@ -1961,6 +1980,17 @@ const ICONS={
 };
 function injectIcons(){ document.querySelectorAll("[data-ic]").forEach(el=>{ el.innerHTML=ICONS[el.dataset.ic]||""; }); }
 
+/* ============ THÈMES ============ */
+const THEME_COLOR={ jupiter:"#ec7a2c", rose:"#b45bd6" };
+function applyTheme(name){
+  name = THEME_COLOR[name] ? name : "jupiter";
+  if(name==="jupiter") document.body.removeAttribute("data-theme");
+  else document.body.setAttribute("data-theme",name);
+  const meta=document.querySelector('meta[name="theme-color"]'); if(meta) meta.setAttribute("content",THEME_COLOR[name]);
+  document.querySelectorAll("#themeRow .theme-opt[data-theme]").forEach(el=>el.classList.toggle("active",el.dataset.theme===name));
+}
+window.setTheme=(name)=>{ store.theme=name; applyTheme(name); save(); toast("Thème appliqué ✓"); };
+
 /* ============ AUTH & SYNC SUPABASE ============ */
 function initSupabase(){
   try{ if(/^https:\/\//.test(SUPABASE_URL) && window.supabase){
@@ -2029,6 +2059,7 @@ function renderTurnstile(){
 }
 function showApp(){
   authShown=false;
+  applyTheme(store.theme||"jupiter");
   document.getElementById("authOverlay").classList.remove("show"); document.body.style.overflow="";
   const pm=document.getElementById("profileMenu");
   if(sb && currentUser){
@@ -2143,6 +2174,7 @@ window.onCaptcha=onCaptcha; window.onCaptchaExpire=onCaptchaExpire;
 window.onloadTurnstile=()=>{ turnstileReady=true; if(authShown) renderTurnstile(); };
 async function boot(){
   injectIcons();
+  applyTheme(store.theme||"jupiter");
   document.querySelectorAll(".pw-eye").forEach(b=>b.innerHTML=EYE);
   if(initSupabase()){
     try{
