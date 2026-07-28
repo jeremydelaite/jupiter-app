@@ -266,8 +266,12 @@
   input::placeholder,textarea::placeholder{color:var(--muted2)}
   input[type=number]{-moz-appearance:textfield;appearance:textfield}
   input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
-  .month-in{cursor:pointer;font-weight:600}
-  .month-in::-webkit-calendar-picker-indicator{cursor:pointer;opacity:.75;filter:sepia(1) saturate(4) hue-rotate(-18deg)}
+  .goal-sel{width:auto;flex:1;min-width:0;padding:9px 30px 9px 12px;font-size:14px;font-weight:600;border-radius:12px;cursor:pointer;
+    -webkit-appearance:none;appearance:none;
+    background-image:linear-gradient(160deg,rgba(255,247,235,.72),rgba(247,233,214,.58)),url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23c85a1c' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat:no-repeat,no-repeat;background-position:center,right 11px center}
+  .goal-actions{display:flex;flex-direction:column;gap:8px;margin-top:8px}
+  .goal-actions .btn.sm{width:100%;justify-content:flex-start;text-align:left}
   input:hover,select:hover,textarea:hover{cursor:pointer;border-color:rgba(255,255,255,.9);box-shadow:var(--sheen), 0 5px 14px rgba(160,110,60,.16)}
   input:focus,select:focus,textarea:focus{cursor:text;
     background:linear-gradient(160deg,rgba(255,248,237,.72),rgba(250,236,217,.55));border-color:var(--primary);
@@ -1395,11 +1399,16 @@ window.manageGoals=()=>{
       const p=goalPlan(a);
       let hint="";
       if(p.type==="date"){
-        hint=`<small class="muted" style="display:block;margin-top:4px">${fmt(p.need)}/mois nécessaires d'ici ${goalDateLabel(p.dateKey)} · versement actuel ${fmt(p.rate)}</small>`;
-        if(p.onTrack) hint+=`<small style="color:var(--green);font-weight:700;display:block;margin-top:2px">✓ Rythme suffisant</small>`;
-        else hint+=`<div class="toolbar" style="margin-top:8px;gap:8px;flex-wrap:wrap">`
-          +(p.rate>0?`<button class="btn ghost sm" onclick="alignGoalDate('${a.id}')">Ajuster la date sur mon rythme</button>`:``)
-          +`<button class="btn ghost sm" onclick="alignVersement('${a.id}')">Ajuster mon versement (${fmt(p.need)}/mois)</button></div>`;
+        hint=`<small class="muted" style="display:block;margin-top:6px">${fmt(p.need)}/mois nécessaires · tu verses ${fmt(p.rate)}/mois</small>`;
+        if(p.onTrack) hint+=`<small style="color:var(--green);font-weight:700;display:block;margin-top:2px">✓ Ton rythme suffit pour ${goalDateLabel(p.dateKey)}</small>`;
+        else {
+          const remaining=(+a.goal||0)-(+a.balance||0);
+          let dateBtn="";
+          if(p.rate>0){ const months=Math.max(1,Math.ceil(remaining/p.rate)); const key=addMonthsKey(store.current,months);
+            dateBtn=`<button class="btn ghost sm" onclick="alignGoalDate('${a.id}')">📅 Repousser l'objectif à ${goalDateLabel(key)}</button>`; }
+          hint+=`<small style="color:var(--amber);font-weight:700;display:block;margin-top:6px">⚠ Rythme insuffisant pour ${goalDateLabel(p.dateKey)}. Pour t'aligner :</small>`
+            +`<div class="goal-actions">${dateBtn}<button class="btn ghost sm" onclick="alignVersement('${a.id}')">💰 Épargner ${fmt(p.need)}/mois pour tenir la date</button></div>`;
+        }
       }
       else if(p.type==="rate") hint=`<small class="muted" style="display:block;margin-top:4px">≈ ${p.months} mois au rythme actuel</small>`;
       else if(p.type==="done") hint=`<small style="color:var(--green);font-weight:700;display:block;margin-top:4px">🎉 Atteint</small>`;
@@ -1413,8 +1422,9 @@ window.manageGoals=()=>{
         <label class="f" style="flex:1;margin:0">Date cible</label>
         <label class="tgl"><input type="checkbox" ${a.goalDate?'checked':''} onchange="toggleGoalDate('${a.id}',this.checked)"><span class="track"></span><span class="knob"></span></label>
       </div>
-      ${a.goalDate?`<div class="lrow" style="padding:6px 0 0 44px">
-        <input type="month" class="month-in" value="${a.goalDate}" min="${store.current}" onchange="setGoalDate('${a.id}',this.value)" onclick="if(this.showPicker)this.showPicker()" onfocus="if(this.showPicker)this.showPicker()" style="flex:1;min-width:0;cursor:pointer">
+      ${a.goalDate?`<div class="lrow" style="padding:6px 0 0 44px;gap:8px">
+        <select class="goal-sel" onchange="setGoalMonth('${a.id}',this.value)">${monthOptions(a.goalDate.split("-")[1])}</select>
+        <select class="goal-sel" onchange="setGoalYear('${a.id}',this.value)">${yearOptions(a.goalDate.split("-")[0])}</select>
       </div>`:''}
       ${hint}
     </div>`;}).join("") : '<div class="empty">Aucun compte épargne pour le moment.</div>'}
@@ -1423,6 +1433,11 @@ window.manageGoals=()=>{
 };
 window.setGoalNow=(id,v)=>{ const a=findAcc(id); if(a){ a.goal=+v||0; save(); renderAccounts(); manageGoals(); } };
 window.setGoalDate=(id,v)=>{ const a=findAcc(id); if(a){ if(v) a.goalDate=v; else delete a.goalDate; save(); renderAccounts(); manageGoals(); } };
+const MOIS_FR=["janvier","février","mars","avril","mai","juin","juillet","août","septembre","octobre","novembre","décembre"];
+function monthOptions(sel){ return MOIS_FR.map((n,i)=>{ const v=String(i+1).padStart(2,"0"); return `<option value="${v}" ${v===sel?"selected":""}>${cap(n)}</option>`; }).join(""); }
+function yearOptions(sel){ const y0=+store.current.split("-")[0]; let o=""; for(let y=y0;y<=y0+15;y++){ o+=`<option value="${y}" ${String(y)===String(sel)?"selected":""}>${y}</option>`; } return o; }
+window.setGoalMonth=(id,m)=>{ const a=findAcc(id); if(a&&a.goalDate){ a.goalDate=a.goalDate.split("-")[0]+"-"+m; save(); renderAccounts(); manageGoals(); } };
+window.setGoalYear=(id,y)=>{ const a=findAcc(id); if(a&&a.goalDate){ a.goalDate=y+"-"+a.goalDate.split("-")[1]; save(); renderAccounts(); manageGoals(); } };
 function addMonthsKey(key,n){ let [y,m]=key.split("-").map(Number); m+=n; y+=Math.floor((m-1)/12); m=((m-1)%12+12)%12+1; return y+"-"+String(m).padStart(2,"0"); }
 window.toggleGoalDate=(id,on)=>{ const a=findAcc(id); if(!a) return; if(on){ a.goalDate=addMonthsKey(store.current,12); } else { delete a.goalDate; } save(); renderAccounts(); manageGoals(); };
 const round2=x=>Math.round((+x||0)*100)/100;
