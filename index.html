@@ -338,6 +338,15 @@
   .badge-on{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.3px;background:var(--greenbg);color:var(--green);padding:3px 7px;border-radius:999px}
   .soon-item{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 0;border-bottom:1px solid var(--line);color:var(--muted);font-weight:600;font-size:14px}
   .soon-item:last-child{border-bottom:0}
+  .color-row{display:flex;gap:9px;flex-wrap:wrap}
+  .color-sw{width:30px;height:30px;border-radius:50%;cursor:pointer;border:2px solid transparent;box-shadow:0 2px 6px rgba(0,0,0,.12)}
+  .color-sw.sel{border-color:var(--txt);transform:scale(1.1)}
+  .icon-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:8px}
+  .icon-opt{aspect-ratio:1;display:grid;place-items:center;border-radius:12px;border:1px solid var(--line);background:var(--bg2);cursor:pointer;transition:.15s}
+  .icon-opt:hover{border-color:var(--primary)}
+  .icon-opt.sel{border-color:var(--primary);box-shadow:0 0 0 3px var(--glow)}
+  .icon-opt svg{width:22px;height:22px}
+  @media(max-width:640px){.icon-grid{grid-template-columns:repeat(5,1fr)}}
   .auth-overlay{display:flex;visibility:hidden;opacity:0;pointer-events:none;position:fixed;inset:0;z-index:100;background:var(--bg);align-items:center;justify-content:center;padding:20px;transition:opacity .2s}
   .auth-overlay.show{visibility:visible;opacity:1;pointer-events:auto}
   .auth-overlay::before{content:"";position:absolute;inset:0;background:
@@ -425,6 +434,14 @@
         <div class="card stat save" onclick="go('save')"><div class="k">Épargne ›</div><div class="v" id="sSave">—</div></div>
       </div>
 
+      <div class="section-h"><h3>Répartition du budget</h3></div>
+      <div class="card">
+        <div class="donut-wrap">
+          <canvas id="budgetDonut" width="320" height="320" style="width:150px;height:150px"></canvas>
+          <div class="legend" id="budgetLegend"></div>
+        </div>
+      </div>
+
       <div class="section-h"><h3>Répartition des dépenses</h3></div>
       <div class="card" onclick="go('tx')" style="cursor:pointer">
         <div class="donut-wrap">
@@ -506,6 +523,7 @@
       <div class="subtabs"><a data-sub="income" onclick="go('income')">Revenus</a><a data-sub="fixed" onclick="go('fixed')">Charges fixes</a><a data-sub="budget" onclick="go('budget')">Budgets</a></div>
       <h2 class="title">Budgets par catégorie</h2>
       <p class="sub">Définis un budget prévisionnel, ou aligne-le sur ce que tu as réellement dépensé.</p>
+      <div class="toolbar"><button class="btn ghost sm" onclick="addCategory()">+ Ajouter une catégorie</button></div>
       <div class="card" id="budgetList"></div>
       <div class="toolbar" style="margin-top:14px">
         <button class="btn ghost sm" onclick="loadBase('budgets')"><i class="bic" data-ic="download"></i>Charger les budgets</button>
@@ -644,7 +662,8 @@ const CATS = [
   {id:"maison", name:"Maison", icon:"🏠", color:"#e0a020"},
   {id:"autre", name:"Autre", icon:"📦", color:"#b08a63"},
 ];
-const catById = id => CATS.find(c=>c.id===id) || CATS[CATS.length-1];
+const catById = id => allCats().find(c=>c.id===id) || CATS[CATS.length-1];
+function allCats(){ return (store.customCats && store.customCats.length) ? CATS.concat(store.customCats) : CATS; }
 const CAT_ICONS={
   all:`<line x1="8" x2="21" y1="6" y2="6"/><line x1="8" x2="21" y1="12" y2="12"/><line x1="8" x2="21" y1="18" y2="18"/><line x1="3" x2="3.01" y1="6" y2="6"/><line x1="3" x2="3.01" y1="12" y2="12"/><line x1="3" x2="3.01" y1="18" y2="18"/>`,
   courses:`<circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/>`,
@@ -659,7 +678,32 @@ const CAT_ICONS={
   maison:`<path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"/><path d="M3 10a2 2 0 0 1 .709-1.528l7-5.999a2 2 0 0 1 2.582 0l7 5.999A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>`,
   autre:`<path d="M11 21.73a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73z"/><path d="M12 22V12"/><polyline points="3.29 7 12 12 20.71 7"/><path d="m7.5 4.27 9 5.15"/>`,
 };
-function catIcon(c,s){ s=s||20; return `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="${c.color||'#9c8a74'}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:block;flex:none">${CAT_ICONS[c.id]||CAT_ICONS.autre}</svg>`; }
+/* Bibliothèque d'icônes pour les catégories personnalisées (style Lucide) */
+const ICON_LIB={
+  cart:CAT_ICONS.courses, resto:CAT_ICONS.sortie, gamepad:CAT_ICONS.loisirs, shirt:CAT_ICONS.vetements,
+  gift:CAT_ICONS.cadeaux, car:CAT_ICONS.voiture, plane:CAT_ICONS.vacances, paw:CAT_ICONS.animaux,
+  home:CAT_ICONS.maison, fuel:CAT_ICONS.essence, box:CAT_ICONS.autre,
+  bag:`<path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/>`,
+  coffee:`<path d="M10 2v2"/><path d="M14 2v2"/><path d="M16 8a1 1 0 0 1 1 1v8a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4V9a1 1 0 0 1 1-1h14a4 4 0 1 1 0 8h-1"/><path d="M6 2v2"/>`,
+  heart:`<path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.29 1.51 4.04 3 5.5l7 7Z"/>`,
+  dumbbell:`<path d="m6.5 6.5 11 11"/><path d="m21 21-1-1"/><path d="m3 3 1 1"/><path d="m18 22 4-4"/><path d="m2 6 4-4"/><path d="m3 10 7-7"/><path d="m14 21 7-7"/>`,
+  book:`<path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/>`,
+  music:`<path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>`,
+  film:`<rect width="18" height="18" x="3" y="3" rx="2"/><path d="M7 3v18"/><path d="M3 7.5h4"/><path d="M3 12h18"/><path d="M3 16.5h4"/><path d="M17 3v18"/><path d="M17 7.5h4"/><path d="M17 16.5h4"/>`,
+  briefcase:`<path d="M16 20V4a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/><rect width="20" height="14" x="2" y="6" rx="2"/>`,
+  school:`<path d="M21.42 10.922a1 1 0 0 0-.019-1.838L12.83 5.18a2 2 0 0 0-1.66 0L2.6 9.08a1 1 0 0 0 0 1.832l8.57 3.908a2 2 0 0 0 1.66 0z"/><path d="M22 10v6"/><path d="M6 12.5V16a6 3 0 0 0 12 0v-3.5"/>`,
+  phone:`<rect width="14" height="20" x="5" y="2" rx="2"/><path d="M12 18h.01"/>`,
+  wifi:`<path d="M12 20h.01"/><path d="M2 8.82a15 15 0 0 1 20 0"/><path d="M5 12.859a10 10 0 0 1 14 0"/><path d="M8.5 16.429a5 5 0 0 1 7 0"/>`,
+  scissors:`<circle cx="6" cy="6" r="3"/><path d="M8.12 8.12 12 12"/><path d="M20 4 8.12 15.88"/><circle cx="6" cy="18" r="3"/><path d="M14.8 14.8 20 20"/>`,
+  pill:`<path d="m10.5 20.5 10-10a4.95 4.95 0 1 0-7-7l-10 10a4.95 4.95 0 1 0 7 7Z"/><path d="m8.5 8.5 7 7"/>`,
+  bus:`<path d="M8 6v6"/><path d="M15 6v6"/><path d="M2 12h19.6"/><path d="M18 18h3s.5-1.7.8-2.8c.1-.4.2-.8.2-1.2 0-.4-.1-.8-.2-1.2l-1.4-5C20.1 6.8 19.1 6 18 6H4a2 2 0 0 0-2 2v10h3"/><circle cx="7" cy="18" r="2"/><path d="M9 18h5"/><circle cx="16" cy="18" r="2"/>`,
+  baby:`<path d="M9 12h.01"/><path d="M15 12h.01"/><path d="M10 16c.5.3 1.2.5 2 .5s1.5-.2 2-.5"/><path d="M19 6.3a9 9 0 0 1 1.8 3.9 2 2 0 0 1 0 3.6 9 9 0 0 1-17.6 0 2 2 0 0 1 0-3.6A9 9 0 0 1 12 3"/>`,
+  coins:`<circle cx="8" cy="8" r="6"/><path d="M18.09 10.37A6 6 0 1 1 10.34 18"/><path d="M7 6h1v4"/><path d="m16.71 13.88.7.71-2.82 2.82"/>`,
+  sparkles:`<path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/>`,
+};
+const CAT_COLORS=['#ec7a2c','#7ba838','#a35bd6','#e8636e','#2fa79c','#d94f45','#4a90d9','#16b3a5','#e0a020','#b08a63','#8b5cf6','#0ea5e9'];
+function catIcon(c,s){ s=s||20; const paths=(c.icon && ICON_LIB[c.icon]) || CAT_ICONS[c.id] || CAT_ICONS.autre;
+  return `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="${c.color||'#9c8a74'}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:block;flex:none">${paths}</svg>`; }
 const TRASH=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>`;
 const BANK=`<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#2fa79c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:block"><line x1="3" x2="21" y1="22" y2="22"/><line x1="6" x2="6" y1="18" y2="11"/><line x1="10" x2="10" y1="18" y2="11"/><line x1="14" x2="14" y1="18" y2="11"/><line x1="18" x2="18" y1="18" y2="11"/><polygon points="12 2 20 7 4 7"/></svg>`;
 const CARD=`<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#e58f2c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:block"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></svg>`;
@@ -729,6 +773,7 @@ function load(){
 function uid(){ return "a"+Date.now().toString(36)+Math.random().toString(36).slice(2,6); }
 function migrate(){
   if(!("template" in store)) store.template=null;
+  if(!store.customCats) store.customCats=[];
   Object.values(store.months||{}).forEach(mo=>{
     (mo.fixed||[]).forEach(fx=>{
       if(fx.planned===undefined) fx.planned = (+fx.amount||0);
@@ -878,7 +923,7 @@ function monthsToGoal(acc){
 }
 function realIncome(){ return M().income.reduce((a,i)=>a+(i.received?(+i.actual||0):0),0); }
 function plannedIncome(){ return sum(M().income,"planned"); }
-function spentByCat(){ const o={}; CATS.forEach(c=>o[c.id]=0); M().tx.forEach(t=>{o[t.cat]=(o[t.cat]||0)+(+t.amount||0)}); return o; }
+function spentByCat(){ const o={}; allCats().forEach(c=>o[c.id]=0); M().tx.forEach(t=>{o[t.cat]=(o[t.cat]||0)+(+t.amount||0)}); return o; }
 function totalVar(){ return M().tx.reduce((a,t)=>a+(+t.amount||0),0); }
 function leftToSpend(){ return M().startBalance + realIncome() - actualFixed() - totalVar() - actualSavings() - actualRepay(); }
 function budgetTotal(){ return Object.values(M().budgets).reduce((a,b)=>a+(+b||0),0); }
@@ -953,41 +998,58 @@ function render(){
   document.getElementById("sIncome").innerHTML=fmt(realIncome())+` <small>/ ${fmt(plannedIncome())}</small>`;
   document.getElementById("sFixed").innerHTML=fmt(actualFixed())+` <small>/ ${fmt(plannedFixed())}</small>`;
   document.getElementById("sVar").innerHTML=fmt(totalVar())+` <small>/ ${fmt(budgetTotal())}</small>`;
-  document.getElementById("sSave").textContent=fmt(actualSavings());
+  document.getElementById("sSave").innerHTML=fmt(actualSavings())+` <small>/ ${fmt(plannedSavings())}</small>`;
 
-  renderDonut(); renderCatProgress(); renderRecent();
+  renderDonut(); renderBudgetDonut(); renderCatProgress(); renderRecent();
   renderTx(); renderFixed(); renderIncome(); renderAccounts(); renderSave(); renderRepay(); renderBudget(); renderBase();
   save();
 }
 
-function renderDonut(){
-  const spent=spentByCat();
-  const data=CATS.map(c=>({...c,val:spent[c.id]})).filter(d=>d.val>0).sort((a,b)=>b.val-a.val);
-  const total=data.reduce((a,d)=>a+d.val,0);
-  const ctx=document.getElementById("donut").getContext("2d");
+function drawDonut(canvasId, data, centerSub){
+  const total=data.reduce((a,d)=>a+(+d.val||0),0);
+  const ctx=document.getElementById(canvasId).getContext("2d");
   ctx.clearRect(0,0,320,320);
   const cx=160,cy=160,r=130,ir=84;
-  if(total===0){
+  if(total<=0){
     ctx.strokeStyle="#e6d6bd";ctx.lineWidth=r-ir;ctx.beginPath();ctx.arc(cx,cy,(r+ir)/2,0,Math.PI*2);ctx.stroke();
   } else {
     let a=-Math.PI/2;
-    data.forEach(d=>{ const ang=d.val/total*Math.PI*2;
+    data.forEach(d=>{ const v=+d.val||0; if(v<=0) return; const ang=v/total*Math.PI*2;
       ctx.beginPath();ctx.moveTo(cx,cy);ctx.arc(cx,cy,r,a,a+ang);ctx.closePath();ctx.fillStyle=d.color;ctx.fill();a+=ang; });
     ctx.globalCompositeOperation="destination-out";
     ctx.beginPath();ctx.arc(cx,cy,ir,0,Math.PI*2);ctx.fill();
     ctx.globalCompositeOperation="source-over";
   }
-  ctx.fillStyle="#3d2c1c";ctx.textAlign="center";ctx.font="800 34px -apple-system,sans-serif";
+  ctx.fillStyle="#3d2c1c";ctx.textAlign="center";ctx.font="800 32px -apple-system,sans-serif";
   ctx.fillText(fmt(total).replace(",00",""),cx,cy-2);
-  ctx.font="600 18px -apple-system,sans-serif";ctx.fillStyle="#9c8a74";ctx.fillText("dépensé",cx,cy+26);
+  ctx.font="600 18px -apple-system,sans-serif";ctx.fillStyle="#9c8a74";ctx.fillText(centerSub,cx,cy+26);
+  return total;
+}
+function renderDonut(){
+  const spent=spentByCat();
+  const data=allCats().map(c=>({id:c.id,name:c.name,color:c.color,icon:c.icon,val:spent[c.id]})).filter(d=>d.val>0).sort((a,b)=>b.val-a.val);
+  const total=drawDonut("donut",data,"dépensé");
   const leg=document.getElementById("legend");
-  if(data.length===0){ leg.innerHTML='<div class="muted">Aucune dépense enregistrée.</div>'; return;}
+  if(!data.length){ leg.innerHTML='<div class="muted">Aucune dépense enregistrée.</div>'; return;}
   leg.innerHTML=data.map(d=>`<div class="li">${catIcon(d,16)} ${d.name}<span class="lp">${(d.val/total*100).toFixed(1)}%</span></div>`).join("");
+}
+function renderBudgetDonut(){
+  const data=[
+    {name:"Charges fixes",color:"#ec7a2c",val:actualFixed()},
+    {name:"Charges variables",color:"#f2a63a",val:totalVar()},
+    {name:"Épargne",color:"#2fa79c",val:actualSavings()},
+    {name:"Remboursements",color:"#d94f45",val:actualRepay()},
+    {name:"Reste",color:"#7ba838",val:Math.max(0,leftToSpend())},
+  ].filter(d=>d.val>0);
+  const total=drawDonut("budgetDonut",data,"réparti");
+  const leg=document.getElementById("budgetLegend");
+  if(!data.length){ leg.innerHTML='<div class="muted">Aucune donnée ce mois.</div>'; return;}
+  leg.innerHTML=data.map(d=>`<div class="li"><span class="sw" style="background:${d.color}"></span>${d.name}<span class="lp">${(d.val/total*100).toFixed(1)}%</span></div>`).join("");
 }
 
 function renderCatProgress(){
   const spent=spentByCat();
-  const rows=CATS.map(c=>({...c,b:+M().budgets[c.id]||0,s:spent[c.id]})).filter(c=>c.b>0||c.s>0).sort((a,b)=>b.s-a.s);
+  const rows=allCats().map(c=>({...c,b:+M().budgets[c.id]||0,s:spent[c.id]})).filter(c=>c.b>0||c.s>0).sort((a,b)=>b.s-a.s);
   const el=document.getElementById("catProgress");
   if(!rows.length){el.innerHTML='<div class="empty">Aucun budget défini.</div>';return;}
   el.innerHTML=rows.map(c=>{
@@ -1010,7 +1072,7 @@ function renderRecent(){
 
 let txFilterCat="all";
 function renderTx(){
-  const chips=[{id:"all",name:"Tout",icon:"📋"}].concat(CATS);
+  const chips=[{id:"all",name:"Tout"}].concat(allCats());
   document.getElementById("txFilter").innerHTML=chips.map(c=>`<div class="chip ${txFilterCat===c.id?'sel':''}" onclick="setTxFilter('${c.id}')"><span class="e">${catIcon(c,16)}</span>${c.name}</div>`).join("");
   document.getElementById("txFilterSel").innerHTML=chips.map(c=>`<option value="${c.id}" ${txFilterCat===c.id?'selected':''}>${c.name}</option>`).join("");
   let list=M().tx.map((t,i)=>({...t,i}));
@@ -1222,21 +1284,64 @@ function renderBudget(){
     <div class="mini-lbl" style="flex:1;margin:0">Catégorie</div>
     <div class="mini-lbl" style="width:92px;text-align:right;margin:0">Prévision</div>
   </div>`;
-  document.getElementById("budgetList").innerHTML=header+CATS.map(c=>{
+  const customIds=new Set((store.customCats||[]).map(c=>c.id));
+  document.getElementById("budgetList").innerHTML=header+allCats().map(c=>{
     const b=+M().budgets[c.id]||0, s=spent[c.id];
     const showAlign = s>0 && Math.abs(s-b)>0.001;
+    const isCustom = customIds.has(c.id);
     return `<div class="lrow">
     <div class="ci" style="width:36px;height:36px;border-radius:12px;background:${c.color}22;color:${c.color};display:grid;place-items:center;flex:none">${catIcon(c,20)}</div>
-    <div class="lname" style="flex:1;min-width:90px">${c.name}<br><small class="muted">dépensé ${fmt(s)}</small>
+    <div class="lname" style="flex:1;min-width:90px">${escapeHtml(c.name)}<br><small class="muted">dépensé ${fmt(s)}</small>
       ${showAlign?`<br><button class="mini-btn" onclick="alignBudget('${c.id}')">↺ Aligner sur le réel (${fmt(s)})</button>`:""}
     </div>
     <input class="amt-in" type="number" step="0.01" value="${b}" data-kind="budget" data-catid="${c.id}">
+    ${isCustom?`<button class="del" onclick="delCategory('${c.id}')">${TRASH}</button>`:`<div style="width:26px;flex:none"></div>`}
   </div>`;}).join("");
 }
 window.setBudget=(id,v)=>{ M().budgets[id]=+v||0; save();
   renderCatProgress(); renderBudget();
   document.getElementById("sVar").innerHTML=fmt(totalVar())+` <small>/ ${fmt(budgetTotal())}</small>`; };
 window.alignBudget=id=>{ M().budgets[id]=spentByCat()[id]; render(); toast("Budget aligné ✓"); };
+
+/* ---- Catégories personnalisées ---- */
+let ncColor=CAT_COLORS[0], ncIcon="bag";
+window.addCategory=()=>{
+  ncColor=CAT_COLORS[0]; ncIcon="bag";
+  const box=document.getElementById("modalBox");
+  box.innerHTML=`<button class="mclose" onclick="closeModal()">✕</button>
+    <h3>Nouvelle catégorie</h3><p class="sub">Nom, couleur et icône.</p>
+    <div class="field"><label class="f">Nom</label><input id="ncName" type="text" placeholder="Ex: Restaurant"></div>
+    <div class="field"><label class="f">Couleur</label><div class="color-row" id="ncColors"></div></div>
+    <div class="field"><label class="f">Icône</label><div class="icon-grid" id="ncIcons"></div></div>
+    <button class="btn" onclick="saveCategory()">Ajouter la catégorie</button>`;
+  renderNcColors(); renderNcIcons();
+  setTimeout(()=>document.getElementById("ncName").focus(),100);
+  document.getElementById("modalBg").classList.add("on"); document.body.style.overflow="hidden";
+};
+function renderNcColors(){
+  document.getElementById("ncColors").innerHTML=CAT_COLORS.map(col=>`<span class="color-sw ${col===ncColor?'sel':''}" style="background:${col}" onclick="pickNcColor('${col}')"></span>`).join("");
+}
+function renderNcIcons(){
+  document.getElementById("ncIcons").innerHTML=Object.keys(ICON_LIB).map(k=>`<div class="icon-opt ${k===ncIcon?'sel':''}" onclick="pickNcIcon('${k}')"><svg viewBox="0 0 24 24" fill="none" stroke="${ncColor}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${ICON_LIB[k]}</svg></div>`).join("");
+}
+window.pickNcColor=c=>{ ncColor=c; renderNcColors(); renderNcIcons(); };
+window.pickNcIcon=k=>{ ncIcon=k; renderNcIcons(); };
+window.saveCategory=()=>{
+  const name=document.getElementById("ncName").value.trim();
+  if(!name){ toast("Entre un nom",true); return; }
+  if(!store.customCats) store.customCats=[];
+  store.customCats.push({id:uid(), name, color:ncColor, icon:ncIcon});
+  save(); closeModal(); render(); toast("Catégorie ajoutée ✓");
+};
+window.delCategory=id=>{
+  const c=catById(id);
+  confirmDialog("Supprimer la catégorie « "+(c?c.name:"")+" » ? Les dépenses de cette catégorie seront reclassées en « Autre ».",()=>{
+    store.customCats=(store.customCats||[]).filter(x=>x.id!==id);
+    Object.values(store.months||{}).forEach(mo=>{ (mo.tx||[]).forEach(t=>{ if(t.cat===id) t.cat="autre"; }); if(mo.budgets) delete mo.budgets[id]; });
+    if(store.template && store.template.budgets) delete store.template.budgets[id];
+    save(); render(); toast("Catégorie supprimée");
+  });
+};
 
 /* ---- Page « Définir la base » (édite le modèle récurrent) ---- */
 function renderBase(){
@@ -1254,7 +1359,7 @@ function renderBase(){
     <button class="del" onclick="delBase('fixed',${i})">${TRASH}</button>
   </div>`).join("") : '<div class="empty">Aucune charge fixe de base. Ajoute-en une.</div>';
   const bl=document.getElementById("baseBudgetList");
-  if(bl) bl.innerHTML = CATS.map(c=>`<div class="lrow">
+  if(bl) bl.innerHTML = allCats().map(c=>`<div class="lrow">
     <div class="ci" style="width:36px;height:36px;border-radius:12px;background:${c.color}22;color:${c.color};display:grid;place-items:center;flex:none">${catIcon(c)}</div>
     <div class="lname" style="flex:1;min-width:80px">${c.name}</div>
     <input class="amt-in" type="number" step="0.01" value="${t.budgets[c.id]||0}" data-kind="bbud" data-catid="${c.id}">
@@ -1366,7 +1471,7 @@ function openAdd(type,editIdx){
   document.getElementById("modalBg").classList.add("on"); document.body.style.overflow="hidden";
 }
 function renderModalCats(){
-  document.getElementById("mCats").innerHTML=CATS.map(c=>`<div class="chip ${addCat===c.id?'sel':''}" onclick="pickCat('${c.id}')"><span class="e">${catIcon(c,16)}</span>${c.name}</div>`).join("");
+  document.getElementById("mCats").innerHTML=allCats().map(c=>`<div class="chip ${addCat===c.id?'sel':''}" onclick="pickCat('${c.id}')"><span class="e">${catIcon(c,16)}</span>${c.name}</div>`).join("");
 }
 window.pickCat=id=>{addCat=id;renderModalCats();};
 window.closeModal=()=>{ document.getElementById("modalBg").classList.remove("on"); document.body.style.overflow=""; editTxIndex=null; };
