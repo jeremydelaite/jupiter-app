@@ -40,10 +40,16 @@
   }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
   html,body{margin:0;padding:0}
+  body{overscroll-behavior-y:contain}
+  .ptr{position:fixed;top:0;left:0;right:0;display:flex;justify-content:center;pointer-events:none;z-index:70;opacity:0;transform:translateY(-16px);transition:opacity .2s}
+  .ptr-circle{width:36px;height:36px;border-radius:50%;display:grid;place-items:center;background:var(--card-solid);border:1px solid var(--glass-border);box-shadow:var(--shadow-sm);color:var(--primary-deep)}
+  .ptr-circle svg{width:18px;height:18px}
+  .ptr.spin .ptr-circle svg{animation:ptrspin .8s linear infinite}
+  @keyframes ptrspin{to{transform:rotate(360deg)}}
   body{
     background:var(--bg); color:var(--txt);
     font-family:var(--font); -webkit-font-smoothing:antialiased;
-    font-size:15px; line-height:1.45; padding-bottom:164px; position:relative; min-height:100vh;
+    font-size:15px; line-height:1.45; padding-bottom:112px; position:relative; min-height:100vh;
   }
   body::before,body::after{content:"";position:fixed;z-index:0;border-radius:50%;filter:blur(45px);pointer-events:none}
   body::before{width:460px;height:460px;top:-160px;right:-120px;
@@ -197,6 +203,7 @@
   .empty{color:var(--muted);text-align:center;padding:36px 10px;font-size:14px}
   .tx-day{display:flex;justify-content:space-between;align-items:center;padding:16px 0 7px;font-size:11.5px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;border-bottom:1px solid var(--line)}
   .tx-day:first-child{padding-top:2px}
+  @media(max-width:859px){ #txList{padding-bottom:56px} }
   .tx-day span:last-child{color:var(--primary-deep);text-transform:none}
 
   .lrow{display:flex;align-items:center;gap:11px;padding:12px 0;border-bottom:1px solid var(--line)}
@@ -382,6 +389,8 @@
 </style>
 </head>
 <body>
+
+<div class="ptr" id="ptr"><div class="ptr-circle"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg></div></div>
 
 <header class="top">
   <div class="top-inner">
@@ -1020,9 +1029,13 @@ function drawDonut(canvasId, data, centerSub){
     ctx.beginPath();ctx.arc(cx,cy,ir,0,Math.PI*2);ctx.fill();
     ctx.globalCompositeOperation="source-over";
   }
-  ctx.fillStyle="#3d2c1c";ctx.textAlign="center";ctx.font="800 32px -apple-system,sans-serif";
-  ctx.fillText(fmt(total).replace(",00",""),cx,cy-2);
-  ctx.font="600 18px -apple-system,sans-serif";ctx.fillStyle="#9c8a74";ctx.fillText(centerSub,cx,cy+26);
+  const txt=fmt(total).replace(",00","");
+  ctx.fillStyle="#3d2c1c";ctx.textAlign="center";
+  let fs=30; ctx.font="800 "+fs+"px -apple-system,sans-serif";
+  const maxW=2*ir-30, w=ctx.measureText(txt).width;
+  if(w>maxW){ fs=Math.max(15,Math.floor(fs*maxW/w)); ctx.font="800 "+fs+"px -apple-system,sans-serif"; }
+  ctx.fillText(txt,cx,cy-2);
+  ctx.font="600 17px -apple-system,sans-serif";ctx.fillStyle="#9c8a74";ctx.fillText(centerSub,cx,cy+24);
   return total;
 }
 function renderDonut(){
@@ -1701,6 +1714,20 @@ document.addEventListener("visibilitychange",()=>{
     pullCloud().then(()=>render());
   }
 });
+
+/* Tirer pour rafraîchir (mobile) : recharge depuis le cloud */
+let ptrStartY=0, ptrPulling=false, ptrDist=0; const PTR_TH=70;
+function ptrReset(){ const el=document.getElementById("ptr"); if(!el)return; el.classList.remove("spin"); el.style.opacity=0; el.style.transform="translateY(-16px)"; }
+async function ptrRefresh(){ const el=document.getElementById("ptr"); if(el) el.classList.add("spin");
+  try{ if(sb && currentUser){ lastPull=Date.now(); await pullCloud(); } }catch(e){}
+  render(); setTimeout(ptrReset,500); }
+window.addEventListener("touchstart",e=>{ if(window.scrollY<=0 && e.touches.length===1){ ptrStartY=e.touches[0].clientY; ptrPulling=true; ptrDist=0; } else ptrPulling=false; },{passive:true});
+window.addEventListener("touchmove",e=>{ if(!ptrPulling)return; ptrDist=e.touches[0].clientY-ptrStartY; const el=document.getElementById("ptr");
+  if(ptrDist>0 && window.scrollY<=0){ const d=Math.min(ptrDist,110); el.style.opacity=Math.min(1,d/PTR_TH); el.style.transform="translateY("+Math.min(d-16,56)+"px)"; }
+  else { ptrPulling=false; ptrReset(); } },{passive:true});
+window.addEventListener("touchend",()=>{ if(!ptrPulling)return; ptrPulling=false;
+  if(ptrDist>=PTR_TH){ const el=document.getElementById("ptr"); el.style.opacity=1; el.style.transform="translateY(56px)"; ptrRefresh(); }
+  else ptrReset(); });
 
 /* Service worker : app installable + hors-ligne */
 if("serviceWorker" in navigator){
