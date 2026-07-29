@@ -517,6 +517,7 @@
         <a class="pd-item" onclick="openTrends()"><i class="pd-ic" data-ic="trend"></i> Tendances</a>
         <a class="pd-item" onclick="openAccount()"><i class="pd-ic" data-ic="account"></i> Mon compte</a>
         <a class="pd-item" onclick="openSetBase()"><i class="pd-ic" data-ic="savecheck"></i> Définir la base</a>
+        <a class="pd-item" onclick="openContact()"><i class="pd-ic" data-ic="mail"></i> Contact</a>
         <a class="pd-item danger" onclick="signOut()"><i class="pd-ic" data-ic="logout"></i> Déconnexion</a>
       </div>
     </div>
@@ -693,11 +694,23 @@
         <p class="sub" style="margin:12px 0 0">D'autres thèmes arriveront bientôt.</p>
       </div>
 
+      <div class="section-h"><h3>Sauvegarde &amp; export</h3></div>
+      <div class="card">
+        <p class="sub" style="margin:0 0 12px">Sauvegarde complète (JSON) pour tout restaurer à l'identique, ou export des dépenses (CSV) pour Excel/Sheets.</p>
+        <div class="toolbar" style="flex-wrap:wrap;gap:10px">
+          <button class="btn ghost sm" onclick="exportJSON()"><i class="bic" data-ic="download"></i>Sauvegarde (JSON)</button>
+          <button class="btn ghost sm" onclick="document.getElementById('importJsonFile').click()">Restaurer (JSON)</button>
+          <button class="btn ghost sm" onclick="exportCSV()"><i class="bic" data-ic="download"></i>Dépenses (CSV)</button>
+          <button class="btn ghost sm" onclick="document.getElementById('importCsvFile').click()">Importer dépenses (CSV)</button>
+        </div>
+        <input type="file" id="importJsonFile" accept=".json,application/json" style="display:none" onchange="importJSON(this)">
+        <input type="file" id="importCsvFile" accept=".csv,text/csv,text/plain" style="display:none" onchange="importCSV(this)">
+      </div>
+
       <div class="section-h"><h3>Bientôt</h3></div>
       <div class="card">
-        <div class="soon-item">📤 Export / import de mes données <span class="badge-soon">À venir</span></div>
-        <div class="soon-item">🔔 Rappels & notifications <span class="badge-soon">À venir</span></div>
-        <div class="soon-item">💱 Devise & format <span class="badge-soon">À venir</span></div>
+        <div class="soon-item">🔔 Rappels &amp; notifications <span class="badge-soon">À venir</span></div>
+        <div class="soon-item">💱 Devise &amp; format <span class="badge-soon">À venir</span></div>
       </div>
 
       <button class="btn ghost" style="margin-top:16px" onclick="signOut()"><i class="bic" data-ic="logout"></i>Se déconnecter</button>
@@ -712,10 +725,11 @@
     <!-- DÉFINIR LA BASE -->
     <section class="view" id="v-setbase">
       <h2 class="title">Définir la base</h2>
-      <p class="sub">Configure ici tes revenus, charges fixes et budgets habituels. Ils seront proposés au chargement de chaque nouveau mois. Les modifications s'enregistrent avec le bouton « Valider ».</p>
+      <p class="sub">Configure ici tes revenus, charges fixes, épargne et budgets habituels. Ils seront proposés au chargement de chaque nouveau mois. Les modifications s'enregistrent avec le bouton « Valider ».</p>
       <div class="subtabs base-subtabs" id="baseTabs">
         <a data-btab="income" class="active" onclick="setBaseTab('income')">Revenus</a>
-        <a data-btab="fixed" onclick="setBaseTab('fixed')">Charges fixes</a>
+        <a data-btab="fixed" onclick="setBaseTab('fixed')">Charges</a>
+        <a data-btab="savings" onclick="setBaseTab('savings')">Épargne</a>
         <a data-btab="budget" onclick="setBaseTab('budget')">Budgets</a>
       </div>
       <div id="baseIncomeBlock">
@@ -725,6 +739,10 @@
       <div id="baseFixedBlock" style="display:none">
         <div class="toolbar"><button class="btn ghost sm" onclick="addBase('fixed')">+ Ajouter une charge</button></div>
         <div class="card" id="baseFixedList"></div>
+      </div>
+      <div id="baseSaveBlock" style="display:none">
+        <div class="toolbar"><button class="btn ghost sm" onclick="addBase('savings')">+ Ajouter un versement</button></div>
+        <div class="card" id="baseSaveList"></div>
       </div>
       <div id="baseBudgetBlock" style="display:none">
         <div class="toolbar"><button class="btn ghost sm" onclick="addCategory()">+ Ajouter une catégorie</button></div>
@@ -811,6 +829,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit&onload=onloadTurnstile" async defer></script>
+<script src="https://js.hcaptcha.com/1/api.js?render=explicit&onload=onloadHcaptcha" async defer></script>
 <script>
 /* ============ CONFIG SUPABASE ============ */
 /* Remplace ces 2 valeurs par celles de ton projet Supabase (Settings → API).
@@ -819,9 +838,12 @@ const SUPABASE_URL = "https://sfbpxtuvveicsrevhcrk.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNmYnB4dHV2dmVpY3NyZXZoY3JrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ2NTQ1NTMsImV4cCI6MjEwMDIzMDU1M30.r5VjQIAHdMfqqYBde9UGe6tS6BNfxOKevFXFNZYpfBg";
 /* Anti-robots (facultatif) : colle ta clé "site" Cloudflare Turnstile. Laisse vide pour désactiver. */
 const TURNSTILE_SITE_KEY = "0x4AAAAAAD6tnrhvgBARHF2v";
+const WEB3FORMS_KEY = "4ae464fd-94b7-4c10-9d80-3a1f67f882aa"; // clé d'accès obtenue sur https://web3forms.com (liée à ton email)
+const HCAPTCHA_KEY = "50b2fe65-b00b-4b9e-ad62-3ba471098be2"; // clé hCaptcha partagée gratuite de Web3Forms (anti-spam)
 const MIN_PW = 8; // longueur minimale du mot de passe
 let sb=null, currentUser=null, syncTimer=null, captchaToken=null, turnstileWidget=null;
 let cloudLoaded=false, lastPull=0, cloudUpdatedAt=null, lastPushedJSON="", conflictOpen=false;
+let contactOpen=false, hcapReady=false, hcapWidget=null, hcapToken=null;
 let turnstileReady=false, authShown=false;
 
 /* ============ DATA MODEL ============ */
@@ -1847,6 +1869,17 @@ function renderBase(){
     <div class="fx-amts"><div><input class="amt-in" type="number" step="0.01" inputmode="decimal" value="${x.planned}" data-kind="bfix" data-i="${i}"></div></div>
     <button class="del" onclick="delBase('fixed',${i})">${TRASH}</button>
   </div>`).join("") : '<div class="empty">Aucune charge fixe de base. Ajoute-en une.</div>';
+  const sl=document.getElementById("baseSaveList");
+  if(sl){ t.savings=(t.savings||[]);
+    sl.innerHTML = t.savings.length ? t.savings.map((x,i)=>{
+      const acc=findAcc(x.accountId); const nm=acc?acc.name:(x.name||"Compte supprimé");
+      return `<div class="lrow">
+      <div class="ci" style="width:34px;height:34px;border-radius:11px;background:#dcefec;display:grid;place-items:center;flex:none">${BANK}</div>
+      <div class="lname" style="flex:1;min-width:60px">${escapeHtml(nm)}</div>
+      <div class="fx-amts"><div><input class="amt-in" type="number" step="0.01" inputmode="decimal" value="${x.planned}" data-kind="bsav" data-i="${i}"></div></div>
+      <button class="del" onclick="delBase('savings',${i})">${TRASH}</button>
+    </div>`;}).join("") : '<div class="empty">Aucun versement récurrent. Ajoute-en un pour qu\'il soit proposé chaque mois.</div>';
+  }
   const bl=document.getElementById("baseBudgetList");
   const bCustom=new Set((store.customCats||[]).map(x=>x.id));
   if(bl) bl.innerHTML = allCats().map(c=>`<div class="lrow">
@@ -1860,10 +1893,11 @@ window.setBaseTab=(tab)=>{
   document.querySelectorAll("#baseTabs [data-btab]").forEach(b=>b.classList.toggle("active",b.dataset.btab===tab));
   document.getElementById("baseIncomeBlock").style.display = tab==="income"?"block":"none";
   document.getElementById("baseFixedBlock").style.display  = tab==="fixed" ?"block":"none";
+  document.getElementById("baseSaveBlock").style.display   = tab==="savings"?"block":"none";
   document.getElementById("baseBudgetBlock").style.display = tab==="budget"?"block":"none";
 };
 window.openSetBase=()=>{ const d=document.getElementById("profileDropdown"); if(d) d.classList.remove("open"); setBaseTab("income"); go("setbase"); renderBase(); };
-window.addBase=(type)=> openAdd(type==="income"?"bincome":"bfixed");
+window.addBase=(type)=> openAdd(type==="income"?"bincome":type==="savings"?"bsave":"bfixed");
 window.delBase=(type,i)=>{ confirmDialog("Retirer cet élément de la base ?",()=>{ T()[type].splice(i,1); save(); render(); toast("Retiré de la base"); }); };
 
 window.delItem=(type,i)=>{
@@ -1925,15 +1959,16 @@ function openAdd(type,editIdx){
         <div class="field"><label class="f">Note</label><input id="mNote" type="text" placeholder="optionnel"></div>
       </div>
       <button class="btn" onclick="saveExpense()">${ed?'Enregistrer':'Ajouter la dépense'}</button>`;
-  } else if(type==="save"){
+  } else if(type==="save"||type==="bsave"){
+    const isBase = type==="bsave";
     const accs=(store.accounts||[]).filter(a=>(a.type||"epargne")!=="credit");
     if(!accs.length){ toast("Ajoute d'abord un compte épargne",true); addAccount("epargne"); return; }
     html=`<button class="mclose" onclick="closeModal()">✕</button>
-      <h3>Nouveau versement</h3><p class="sub">Versement prévu ce mois vers un compte.</p>
+      <h3>${isBase?"Versement récurrent":"Nouveau versement"}</h3><p class="sub">${isBase?"Versement proposé automatiquement chaque nouveau mois.":"Versement prévu ce mois vers un compte."}</p>
       <div class="field"><label class="f">Compte</label>
         <select id="mAcc">${accs.map(a=>`<option value="${a.id}">${escapeHtml(a.name)}</option>`).join("")}</select></div>
       <div class="field"><label class="f">Montant (€)</label><input id="mAmt" type="number" step="0.01" inputmode="decimal" placeholder="0,00"></div>
-      <button class="btn" onclick="saveLine('save')">Ajouter</button>`;
+      <button class="btn" onclick="saveLine('${type}')">Ajouter</button>`;
   } else if(type==="repay"){
     const accs=(store.accounts||[]).filter(a=>a.type==="credit");
     if(!accs.length){ toast("Ajoute d'abord un crédit",true); addAccount("credit"); return; }
@@ -1961,7 +1996,7 @@ function openAdd(type,editIdx){
     document.getElementById("mDate").value = ed ? ed.date : todayStr();
     if(ed){ document.getElementById("mAmt").value=ed.amount; document.getElementById("mNote").value=ed.note||""; }
     renderModalCats(); setTimeout(()=>document.getElementById("mAmt").focus(),100);
-  } else if(type==="save"||type==="repay"){ setTimeout(()=>document.getElementById("mAmt").focus(),100); }
+  } else if(type==="save"||type==="bsave"||type==="repay"){ setTimeout(()=>document.getElementById("mAmt").focus(),100); }
   else setTimeout(()=>document.getElementById("mName").focus(),100);
   document.getElementById("modalBg").classList.add("on"); document.body.style.overflow="hidden";
 }
@@ -1970,7 +2005,7 @@ function renderModalCats(){
   const sel=document.getElementById("mCatsSel"); if(sel) sel.innerHTML=allCats().map(c=>`<option value="${c.id}" ${addCat===c.id?'selected':''}>${escapeHtml(c.name)}</option>`).join("");
 }
 window.pickCat=id=>{addCat=id;renderModalCats();};
-window.closeModal=()=>{ document.getElementById("modalBg").classList.remove("on"); document.body.style.overflow=""; editTxIndex=null; editCatId=null; };
+window.closeModal=()=>{ document.getElementById("modalBg").classList.remove("on"); document.body.style.overflow=""; editTxIndex=null; editCatId=null; contactOpen=false; };
 document.getElementById("modalBg").addEventListener("click",e=>{if(e.target.id==="modalBg")closeModal();});
 
 window.saveExpense=()=>{
@@ -1993,6 +2028,15 @@ window.saveLine=(type)=>{
     const acc=findAcc(accId);
     M().savings.push({accountId:accId, name:acc?acc.name:"", planned:amt, actual:amt, done:false, creditedAmount:0});
     closeModal(); render(); toast("Versement ajouté ✓"); return;
+  }
+  if(type==="bsave"){
+    const accId=document.getElementById("mAcc").value;
+    const amt=parseFloat(document.getElementById("mAmt").value);
+    if(isNaN(amt)||amt<0){toast("Montant invalide",true);return;}
+    const acc=findAcc(accId); const t=T();
+    const ex=t.savings.find(s=>s.accountId===accId);
+    if(ex) ex.planned=amt; else t.savings.push({accountId:accId, name:acc?acc.name:"", planned:amt});
+    save(); closeModal(); render(); toast("Ajouté à la base ✓"); return;
   }
   if(type==="repay"){
     const accId=document.getElementById("mAcc").value;
@@ -2058,6 +2102,7 @@ const ICONS={
   manage:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><line x1="21" x2="14" y1="4" y2="4"/><line x1="10" x2="3" y1="4" y2="4"/><line x1="21" x2="12" y1="12" y2="12"/><line x1="8" x2="3" y1="12" y2="12"/><line x1="21" x2="16" y1="20" y2="20"/><line x1="12" x2="3" y1="20" y2="20"/><line x1="14" x2="14" y1="2" y2="6"/><line x1="8" x2="8" y1="10" y2="14"/><line x1="16" x2="16" y1="18" y2="22"/></svg>`,
   account:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>`,
   logout:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg>`,
+  mail:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>`,
 };
 function injectIcons(){ document.querySelectorAll("[data-ic]").forEach(el=>{ el.innerHTML=ICONS[el.dataset.ic]||""; }); }
 
@@ -2094,6 +2139,87 @@ function applyTheme(name){
   retintFavicon(name);
 }
 window.setTheme=(name)=>{ store.theme=name; applyTheme(name); save(); toast("Thème appliqué ✓"); };
+
+/* ============ SAUVEGARDE / EXPORT ============ */
+function downloadFile(name, content, type){
+  const blob=new Blob([content],{type}); const url=URL.createObjectURL(blob);
+  const a=document.createElement("a"); a.href=url; a.download=name; document.body.appendChild(a); a.click();
+  setTimeout(()=>{ URL.revokeObjectURL(url); a.remove(); },100);
+}
+window.exportJSON=()=>{
+  downloadFile("jupiter-sauvegarde-"+todayStr()+".json", JSON.stringify(store,null,2), "application/json");
+  toast("Sauvegarde exportée ✓");
+};
+window.importJSON=(inp)=>{
+  const f=inp.files && inp.files[0]; inp.value=""; if(!f) return;
+  const rd=new FileReader();
+  rd.onload=()=>{
+    let data; try{ data=JSON.parse(rd.result); }catch(e){ toast("Fichier JSON invalide",true); return; }
+    if(!data || typeof data!=="object" || !data.months){ toast("Sauvegarde non reconnue",true); return; }
+    confirmDialog("Restaurer cette sauvegarde remplacera TOUTES tes données actuelles. Continuer ?",()=>{
+      store=data; migrate();
+      if(!store.current || !store.months[store.current]) store.current=Object.keys(store.months).sort().pop()||store.current;
+      save(); applyTheme(store.theme||"jupiter"); render(); toast("Sauvegarde restaurée ✓");
+    },"Restaurer",false);
+  };
+  rd.readAsText(f);
+};
+function csvCell(v){ v=(v==null?"":String(v)); return /[;"\n]/.test(v) ? '"'+v.replace(/"/g,'""')+'"' : v; }
+window.exportCSV=()=>{
+  const rows=[["Date","Mois","Catégorie","Montant","Note"]];
+  Object.keys(store.months||{}).sort().forEach(mk=>{
+    (store.months[mk].tx||[]).forEach(t=>{
+      const c=catById(t.cat);
+      rows.push([t.date||"", mk, c?c.name:t.cat, (+t.amount||0).toFixed(2).replace(".",","), t.note||""]);
+    });
+  });
+  const csv="﻿"+rows.map(r=>r.map(csvCell).join(";")).join("\r\n"); // BOM + ; pour Excel FR
+  downloadFile("jupiter-depenses-"+todayStr()+".csv", csv, "text/csv");
+  toast("Dépenses exportées ✓");
+};
+function parseCSV(text, delim){
+  const rows=[]; let row=[], cur="", q=false;
+  for(let i=0;i<text.length;i++){ const ch=text[i];
+    if(q){ if(ch==='"'){ if(text[i+1]==='"'){cur+='"';i++;} else q=false; } else cur+=ch; }
+    else if(ch==='"') q=true;
+    else if(ch===delim){ row.push(cur); cur=""; }
+    else if(ch==='\n'){ row.push(cur); rows.push(row); row=[]; cur=""; }
+    else if(ch==='\r'){}
+    else cur+=ch;
+  }
+  if(cur!==""||row.length){ row.push(cur); rows.push(row); }
+  return rows;
+}
+window.importCSV=(inp)=>{
+  const f=inp.files && inp.files[0]; inp.value=""; if(!f) return;
+  const rd=new FileReader();
+  rd.onload=()=>{
+    let text=rd.result; if(text.charCodeAt(0)===0xFEFF) text=text.slice(1);
+    const delim = (text.split(/\r?\n/)[0]||"").includes(";") ? ";" : ",";
+    const rows=parseCSV(text,delim).filter(r=>r.length && r.some(c=>(c||"").trim()!==""));
+    if(rows.length<2){ toast("CSV vide ou invalide",true); return; }
+    const start = /date/i.test((rows[0][0]||"")) ? 1 : 0;   // saute l'en-tête si présent
+    const cats=allCatsFull();
+    const toAdd=[];
+    for(let i=start;i<rows.length;i++){
+      const r=rows[i];
+      const date=(r[0]||"").trim();
+      const catName=(r[2]||"").trim();
+      const amt=parseFloat(String(r[3]||"").replace(/\s/g,"").replace(",","."));
+      const note=(r[4]||"").trim();
+      const mk=date.slice(0,7);
+      if(!/^\d{4}-\d{2}-\d{2}$/.test(date) || isNaN(amt) || amt<=0) continue;
+      const c=cats.find(x=>x.name.toLowerCase()===catName.toLowerCase());
+      toAdd.push({mk, tx:{cat:c?c.id:"autre", amount:amt, note, date}});
+    }
+    if(!toAdd.length){ toast("Aucune dépense valide trouvée",true); return; }
+    confirmDialog(toAdd.length+" dépense(s) vont être ajoutées à leurs mois respectifs. Continuer ?",()=>{
+      toAdd.forEach(x=>{ ensureMonth(x.mk); store.months[x.mk].tx.push(x.tx); });
+      save(); render(); toast(toAdd.length+" dépense(s) importée(s) ✓");
+    },"Importer",false);
+  };
+  rd.readAsText(f);
+};
 
 /* ============ AUTH & SYNC SUPABASE ============ */
 function initSupabase(){
@@ -2217,6 +2343,68 @@ window.authSubmit=async()=>{
 window.toggleProfileMenu=(e)=>{ if(e) e.stopPropagation(); document.getElementById("profileDropdown").classList.toggle("open"); };
 document.addEventListener("click",()=>{ const d=document.getElementById("profileDropdown"); if(d) d.classList.remove("open"); });
 window.openAccount=()=>{ const d=document.getElementById("profileDropdown"); if(d) d.classList.remove("open"); go("account"); };
+window.openContact=()=>{
+  const d=document.getElementById("profileDropdown"); if(d) d.classList.remove("open");
+  const email = (currentUser && currentUser.email) || "";
+  const box=document.getElementById("modalBox");
+  box.innerHTML=`<button class="mclose" onclick="closeModal()">✕</button>
+    <h3>Contact</h3><p class="sub">Signale un bug, une suggestion ou pose ta question. On te répond par email.</p>
+    <div class="field"><label class="f">Sujet</label>
+      <select id="ctcType"><option>Bug / erreur</option><option>Suggestion</option><option>Question</option><option>Autre</option></select></div>
+    <div class="field"><label class="f">Ton email</label>
+      <input id="ctcEmail" type="email" autocomplete="email" placeholder="pour te répondre" value="${escapeHtml(email)}"></div>
+    <div class="field"><label class="f">Message</label>
+      <textarea id="ctcMsg" rows="5" placeholder="Décris ta demande…"></textarea></div>
+    <input type="checkbox" id="ctcBot" tabindex="-1" autocomplete="off" style="position:absolute;left:-9999px;opacity:0" aria-hidden="true">
+    <div id="ctcCaptcha" style="min-height:70px;margin-bottom:6px"></div>
+    <div id="ctcErr" class="auth-err"></div>
+    <button class="btn" id="ctcSend" onclick="sendContact(this)">Envoyer</button>`;
+  contactOpen=true; hcapToken=null;
+  requestAnimationFrame(()=>requestAnimationFrame(renderHcaptcha));
+  setTimeout(()=>document.getElementById("ctcMsg").focus(),100);
+  document.getElementById("modalBg").classList.add("on"); document.body.style.overflow="hidden";
+};
+function renderHcaptcha(){
+  if(!contactOpen || !hcapReady || !window.hcaptcha) return;
+  const box=document.getElementById("ctcCaptcha"); if(!box) return;
+  if(hcapWidget!==null){ try{ window.hcaptcha.reset(hcapWidget); }catch(e){} hcapToken=null; return; }
+  try{ hcapWidget=window.hcaptcha.render("ctcCaptcha",{ sitekey:HCAPTCHA_KEY,
+    callback:t=>{ hcapToken=t; }, "expired-callback":()=>{ hcapToken=null; } }); }catch(e){}
+}
+window.onloadHcaptcha=()=>{ hcapReady=true; if(contactOpen) renderHcaptcha(); };
+window.sendContact=async(btn)=>{
+  const type=document.getElementById("ctcType").value;
+  const email=document.getElementById("ctcEmail").value.trim();
+  const msg=document.getElementById("ctcMsg").value.trim();
+  const err=document.getElementById("ctcErr"); err.style.color="var(--red)";
+  if(!msg){ err.textContent="Écris ton message."; return; }
+  if(email && !/^\S+@\S+\.\S+$/.test(email)){ err.textContent="Email invalide."; return; }
+  if(!WEB3FORMS_KEY || WEB3FORMS_KEY==="VOTRE_CLE_WEB3FORMS"){
+    err.textContent="Formulaire non configuré (clé Web3Forms manquante)."; return; }
+  const botEl=document.getElementById("ctcBot");
+  if(botEl && botEl.checked){ closeModal(); return; }   // honeypot : bot détecté, on ignore silencieusement
+  if(hcapReady && hcapWidget!==null && !hcapToken){ err.textContent="Valide le captcha anti-robot ci-dessus."; return; }
+  const lbl=btn.textContent; btn.disabled=true; btn.textContent="…";
+  try{
+    const r=await fetch("https://api.web3forms.com/submit",{
+      method:"POST", headers:{"Content-Type":"application/json", Accept:"application/json"},
+      body:JSON.stringify({
+        access_key:WEB3FORMS_KEY,
+        botcheck:false,
+        "h-captcha-response":hcapToken||undefined,
+        subject:"Jupiter — "+type,
+        from_name:"Jupiter"+(email?" ("+email+")":""),
+        email:email||"noreply@jupiter.app",
+        message:"["+type+"]\n\n"+msg+"\n\n— envoyé depuis Jupiter"+(currentUser?", compte "+currentUser.email:"")
+      })
+    });
+    const data=await r.json();
+    if(data && data.success){ closeModal(); toast("Message envoyé ✓"); }
+    else { err.textContent=(data && data.message) || "Échec de l'envoi, réessaie."; }
+  }catch(e){ err.textContent="Envoi impossible (connexion ?)."; }
+  finally{ btn.disabled=false; btn.textContent=lbl;
+    if(hcapReady && hcapWidget!==null){ try{ window.hcaptcha.reset(hcapWidget); }catch(e){} hcapToken=null; } }
+};
 window.changePassword=async(btn)=>{
   const p1=document.getElementById("accPw").value, p2=document.getElementById("accPw2").value;
   const err=document.getElementById("accPwErr"); err.style.color="var(--red)";
@@ -2363,6 +2551,7 @@ function commitInputs(scope){
     else if(k.kind==="bincname"){ if(inp.value.trim()) T().income[+k.i].name=inp.value.trim(); }
     else if(k.kind==="bfix") T().fixed[+k.i].planned=v;
     else if(k.kind==="bfixname"){ if(inp.value.trim()) T().fixed[+k.i].name=inp.value.trim(); }
+    else if(k.kind==="bsav") T().savings[+k.i].planned=v;
     else if(k.kind==="bbud") T().budgets[k.catid]=v;
   });
 }
@@ -2383,6 +2572,7 @@ function revertInputs(scope){
     else if(k.kind==="bincname") v=T().income[+k.i].name;
     else if(k.kind==="bfix") v=T().fixed[+k.i].planned;
     else if(k.kind==="bfixname") v=T().fixed[+k.i].name;
+    else if(k.kind==="bsav") v=T().savings[+k.i].planned;
     else if(k.kind==="bbud") v=T().budgets[k.catid];
     if(v!==undefined) inp.value=v;
   });
