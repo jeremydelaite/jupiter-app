@@ -417,13 +417,18 @@
   .fab:active{transform:scale(.94)}
   @media(min-width:860px){.fab{bottom:30px;right:30px}}
 
-  .modal-bg{position:fixed;inset:0;z-index:60;background:rgba(80,45,20,.35);backdrop-filter:blur(6px);display:none;align-items:center;justify-content:center;padding:18px}
+  .modal-bg{position:fixed;inset:0;z-index:110;background:rgba(80,45,20,.35);backdrop-filter:blur(6px);display:none;align-items:center;justify-content:center;padding:18px}
   .modal-bg.on{display:flex}
   .modal{background:linear-gradient(160deg,rgba(255,250,242,.82),rgba(255,242,228,.72));
     backdrop-filter:blur(18px) saturate(1.5);-webkit-backdrop-filter:blur(18px) saturate(1.5);
     border:1px solid var(--glass-border);border-radius:28px;width:100%;max-width:460px;padding:22px;max-height:88vh;overflow:auto;
     box-shadow:0 26px 64px rgba(120,60,20,.34), inset 0 1px 0 rgba(255,255,255,.85), inset 0 0 0 1px rgba(255,255,255,.15)}
   .modal h3{margin:0 0 4px;font-size:18px}
+  .legal{max-height:60vh;overflow:auto;margin:6px 0 4px;padding-right:4px}
+  .legal h4{font-family:var(--font-display);font-size:14px;margin:16px 0 6px;color:var(--primary-deep)}
+  .legal h4:first-child{margin-top:4px}
+  .legal p{font-size:12.5px;line-height:1.5;color:var(--txt);margin:0 0 8px}
+  .legal code{background:var(--card2);padding:1px 5px;border-radius:6px;font-size:11.5px}
   .modal .mclose{float:right;background:var(--card2);border:0;color:var(--muted);width:32px;height:32px;border-radius:11px;font-size:17px;cursor:pointer}
 
   .toast{position:fixed;bottom:104px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--green);color:#fff;font-weight:700;padding:12px 22px;border-radius:999px;z-index:80;opacity:0;transition:.3s;pointer-events:none;box-shadow:var(--shadow);white-space:nowrap;max-width:92vw;font-size:14px}
@@ -518,6 +523,7 @@
         <a class="pd-item" onclick="openAccount()"><i class="pd-ic" data-ic="account"></i> Mon compte</a>
         <a class="pd-item" onclick="openSetBase()"><i class="pd-ic" data-ic="savecheck"></i> Définir la base</a>
         <a class="pd-item" onclick="openContact()"><i class="pd-ic" data-ic="mail"></i> Contact</a>
+        <a class="pd-item" onclick="openAbout()"><i class="pd-ic" data-ic="info"></i> À propos &amp; confidentialité</a>
         <a class="pd-item danger" onclick="signOut()"><i class="pd-ic" data-ic="logout"></i> Déconnexion</a>
       </div>
     </div>
@@ -824,6 +830,7 @@
     <div style="display:flex;justify-content:center;margin-bottom:12px;min-height:66px"><div id="turnstileBox"></div></div>
     <button class="btn" id="authSubmit" onclick="authSubmit()">Se connecter</button>
     <div class="auth-toggle">Pas encore de compte ? <a id="authToggle" onclick="toggleAuthMode()">Créer un compte</a></div>
+    <div class="auth-toggle" style="margin-top:8px;font-size:12px"><a onclick="openAbout()">Confidentialité &amp; mentions légales</a></div>
   </div>
 </div>
 
@@ -2103,6 +2110,7 @@ const ICONS={
   account:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>`,
   logout:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg>`,
   mail:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>`,
+  info:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>`,
 };
 function injectIcons(){ document.querySelectorAll("[data-ic]").forEach(el=>{ el.innerHTML=ICONS[el.dataset.ic]||""; }); }
 
@@ -2404,6 +2412,34 @@ window.sendContact=async(btn)=>{
   }catch(e){ err.textContent="Envoi impossible (connexion ?)."; }
   finally{ btn.disabled=false; btn.textContent=lbl;
     if(hcapReady && hcapWidget!==null){ try{ window.hcaptcha.reset(hcapWidget); }catch(e){} hcapToken=null; } }
+};
+/* Éditeur / contact affichés dans « À propos » — à adapter si besoin */
+const APP_EDITOR = "jeremydelaite";
+window.openAbout=()=>{
+  const d=document.getElementById("profileDropdown"); if(d) d.classList.remove("open");
+  const box=document.getElementById("modalBox");
+  box.innerHTML=`<button class="mclose" onclick="closeModal()">✕</button>
+    <h3>À propos &amp; confidentialité</h3>
+    <div class="legal">
+      <h4>Confidentialité &amp; données (RGPD)</h4>
+      <p><b>Responsable du traitement :</b> ${APP_EDITOR}. Pour toute demande, utilise le formulaire <b>Contact</b>.</p>
+      <p><b>Données traitées :</b> ton adresse email (pour le compte) et les données budgétaires que tu saisis (revenus, dépenses, épargne, crédits, budgets).</p>
+      <p><b>Finalité :</b> te permettre d'utiliser l'application et, si tu crées un compte, de synchroniser tes données entre tes appareils.</p>
+      <p><b>Stockage :</b> en local dans ton navigateur. Si tu crées un compte, également dans une base <b>Supabase</b> ; grâce à la sécurité par ligne (RLS), chaque compte n'accède qu'à ses propres données.</p>
+      <p><b>Prestataires tiers :</b> Supabase (authentification &amp; base de données), Cloudflare Turnstile (anti-robot à la connexion), hCaptcha (anti-robot du formulaire de contact), Web3Forms (acheminement des messages de contact), et l'hébergeur du site (GitHub Pages). Ces services peuvent traiter des données techniques nécessaires à leur fonctionnement.</p>
+      <p><b>Conservation :</b> tes données sont conservées tant que ton compte existe et sont supprimées lorsque tu supprimes ton compte.</p>
+      <p><b>Tes droits :</b> accès et rectification directement dans l'app ; suppression via <i>Mon compte → Supprimer mon compte</i> (ou en vidant les données locales du navigateur). Tu peux exercer tes droits via le formulaire de contact.</p>
+      <p><b>Aucune publicité, aucun traceur publicitaire, aucune revente de données.</b></p>
+      <h4>Mentions légales</h4>
+      <p><b>Éditeur :</b> ${APP_EDITOR}. <b>Contact :</b> via le formulaire de contact de l'app.</p>
+      <p><b>Hébergeur :</b> GitHub, Inc. — GitHub Pages, 88 Colin P. Kelly Jr. Street, San Francisco, CA 94107, États-Unis (à adapter si tu héberges ailleurs, ex. Netlify).</p>
+      <p><b>Nature :</b> application web personnelle et gratuite de gestion de budget.</p>
+      <h4>Licence</h4>
+      <p>Code source sous licence <b>MIT</b> © 2026 ${APP_EDITOR} (voir le fichier <code>LICENSE</code>). Libre d'utilisation, de modification et de distribution, sans garantie.</p>
+      <p class="muted" style="font-size:11.5px">Ce texte est fourni à titre informatif et doit être adapté à ta situation ; il ne constitue pas un conseil juridique.</p>
+    </div>
+    <button class="btn" style="margin-top:8px" onclick="closeModal()">Fermer</button>`;
+  document.getElementById("modalBg").classList.add("on"); document.body.style.overflow="hidden";
 };
 window.changePassword=async(btn)=>{
   const p1=document.getElementById("accPw").value, p2=document.getElementById("accPw2").value;

@@ -24,6 +24,7 @@ Interface « liquid glass » moderne, responsive mobile + ordinateur. Aucune dé
 - **Base récurrente** : revenus / charges / **versements d'épargne par compte** / budgets réutilisés et pré-remplis chaque mois.
 - **Sauvegarde & export** : sauvegarde complète en JSON (restauration à l'identique) et export/import des dépenses en CSV (Excel/Sheets).
 - **Contact** : formulaire intégré (Web3Forms) pour signaler un bug ou une suggestion, protégé anti-spam (honeypot + hCaptcha).
+- **À propos & confidentialité** : page intégrée regroupant la politique de confidentialité (RGPD), les mentions légales et la licence.
 - **Navigation par mois**, données conservées d'un mois à l'autre.
 - **Thèmes** : Jupiter (orange/beige), Violet Rose, Nuit (sombre) et Menthe, toujours en style liquid glass — choix dans « Mon compte → Apparence », conservé et synchronisé.
 - **Application installable (PWA)** : ajout à l'écran d'accueil sur mobile, fonctionne hors-ligne, glisser vers le bas pour rafraîchir.
@@ -138,9 +139,11 @@ Astuce : en branchant Netlify ou Cloudflare Pages sur ce dépôt, l'app se redé
 
 ---
 
-## 📄 Licence
+## 📄 Licence &amp; confidentialité
 
 Projet sous licence **MIT** — libre d'utilisation, de modification et de partage (voir le fichier `LICENSE`). © 2026 jeremydelaite.
+
+La politique de confidentialité (RGPD), les mentions légales et la licence sont aussi consultables **dans l'app** (menu profil → *À propos & confidentialité*, ou lien sur l'écran de connexion). Ce contenu est informatif et à adapter à ta situation ; les champs éditeur/hébergeur se règlent via la constante `APP_EDITOR` en haut du script et le texte de la fonction `openAbout`.
 
 ---
 

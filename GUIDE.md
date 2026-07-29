@@ -19,6 +19,7 @@ Ce guide explique comment utiliser Jupiter au quotidien, écran par écran. Pour
 - [Mon compte, thèmes et synchronisation](#mon-compte-thèmes-et-synchronisation)
 - [Sauvegarde & export (JSON / CSV)](#sauvegarde--export-json--csv)
 - [Nous contacter](#nous-contacter)
+- [À propos & confidentialité](#à-propos--confidentialité)
 - [Questions fréquentes](#questions-fréquentes)
 
 ---
@@ -162,6 +163,18 @@ Depuis **Mon compte → Sauvegarde & export**, quatre boutons :
 ## Nous contacter
 
 Menu profil en haut à droite → **Contact**. Un formulaire permet de signaler un **bug**, faire une **suggestion**, poser une **question** ou autre. Renseigne ton email (pré-rempli si tu es connecté) pour qu'on puisse te répondre, valide l'anti-robot, et envoie. Un accusé de réception s'affiche une fois le message parti.
+
+---
+
+## À propos & confidentialité
+
+Menu profil → **À propos & confidentialité** (aussi accessible via un lien sur l'écran de connexion). Cette fenêtre regroupe :
+
+- **Confidentialité / RGPD** : quelles données sont traitées (ton email et tes données budgétaires), où elles sont stockées (localement dans le navigateur et, avec un compte, dans une base Supabase privée), les prestataires tiers utilisés (Supabase, Cloudflare Turnstile, hCaptcha, Web3Forms, l'hébergeur), la durée de conservation, et **tes droits** (accès, rectification, suppression). Aucune publicité ni revente de données.
+- **Mentions légales** : éditeur, hébergeur et nature de l'application.
+- **Licence** : le code est sous licence **MIT**.
+
+> Ce contenu est informatif et à adapter selon ta situation ; ce n'est pas un conseil juridique.
 
 ---
 
