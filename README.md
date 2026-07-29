@@ -21,7 +21,9 @@ Interface « liquid glass » moderne, responsive mobile + ordinateur. Aucune dé
 - **Budgets** par catégorie, alignables en un clic sur le réel dépensé.
 - **Catégories personnalisées** : création, modification et suppression (ou masquage si des dépenses y sont déjà rattachées), avec choix de couleur et d'icône.
 - **Tendances** : vue d'évolution (dépenses / épargne / solde sur 3, 6 ou 12 mois) et tableau comparatif d'une année sur l'autre.
-- **Base récurrente** : revenus / charges / épargne / budgets réutilisés chaque mois.
+- **Base récurrente** : revenus / charges / **versements d'épargne par compte** / budgets réutilisés et pré-remplis chaque mois.
+- **Sauvegarde & export** : sauvegarde complète en JSON (restauration à l'identique) et export/import des dépenses en CSV (Excel/Sheets).
+- **Contact** : formulaire intégré (Web3Forms) pour signaler un bug ou une suggestion, protégé anti-spam (honeypot + hCaptcha).
 - **Navigation par mois**, données conservées d'un mois à l'autre.
 - **Thèmes** : Jupiter (orange/beige), Violet Rose, Nuit (sombre) et Menthe, toujours en style liquid glass — choix dans « Mon compte → Apparence », conservé et synchronisé.
 - **Application installable (PWA)** : ajout à l'écran d'accueil sur mobile, fonctionne hors-ligne, glisser vers le bas pour rafraîchir.
@@ -125,6 +127,7 @@ Astuce : en branchant Netlify ou Cloudflare Pages sur ce dépôt, l'app se redé
 - **Catégories** : ajoute, modifie ou supprime tes catégories directement dans l'app (onglet **Budgets**), avec choix de couleur et d'icône. Les catégories par défaut se règlent dans le tableau `CATS` en haut du script. Les icônes proviennent de [Lucide](https://lucide.dev).
 - **Icône / favicon** : remplace `jupiter-icon.png` par ton image (carrée). Les favicons peuvent être régénérés à partir de cette image.
 - **Thèmes** : change l'apparence dans l'app (**Mon compte → Apparence** : Jupiter, Violet Rose, Nuit, Menthe). Pour créer un nouveau thème, ajoute un bloc `body[data-theme="..."]` dans le CSS (voir les thèmes existants) ; les couleurs de base sont les variables du bloc `:root`.
+- **Formulaire de contact (optionnel)** : renseigne ta clé d'accès [Web3Forms](https://web3forms.com) (gratuite) dans `const WEB3FORMS_KEY` en haut du script pour activer le menu **Contact**. Anti-spam gratuit : active **hCaptcha** dans le tableau de bord Web3Forms (Settings → Block Spam). Sans clé, le formulaire affiche « non configuré ».
 
 ---
 

@@ -17,6 +17,8 @@ Ce guide explique comment utiliser Jupiter au quotidien, écran par écran. Pour
 - [La base récurrente](#la-base-récurrente)
 - [Changer de mois](#changer-de-mois)
 - [Mon compte, thèmes et synchronisation](#mon-compte-thèmes-et-synchronisation)
+- [Sauvegarde & export (JSON / CSV)](#sauvegarde--export-json--csv)
+- [Nous contacter](#nous-contacter)
 - [Questions fréquentes](#questions-fréquentes)
 
 ---
@@ -117,7 +119,8 @@ Menu en haut à droite → **Tendances**.
 
 Pour ne pas tout ressaisir chaque mois, définis une **base** : tes revenus, charges fixes, épargne et budgets habituels.
 
-- Menu en haut à droite → **Définir la base**. Configure chaque sous-onglet et valide.
+- Menu en haut à droite → **Définir la base**. Quatre sous-onglets : **Revenus**, **Charges**, **Épargne**, **Budgets**. Configure chacun et valide.
+- L'onglet **Épargne** permet d'ajouter des **versements récurrents par compte** (choix du compte + montant) : ils seront proposés automatiquement chaque nouveau mois, comme les revenus et charges.
 - Sur chaque écran (revenus, charges, budgets), le bouton **« Charger… »** applique la base au mois en cours.
 - À l'ouverture d'un nouveau mois encore vide, Jupiter te propose de **tout charger** d'un coup.
 
@@ -137,7 +140,28 @@ Bouton profil en haut à droite → **Mon compte**.
 - **Mot de passe** : change-le à tout moment (min. 8 caractères, une majuscule, une minuscule et un chiffre).
 - **Apparence** : choisis ton thème — **Jupiter**, **Violet Rose**, **Nuit** (sombre) ou **Menthe**. Le choix est conservé et synchronisé entre tes appareils.
 - **Synchronisation** : si un compte est utilisé, tes données sont sauvegardées dans le cloud et se retrouvent sur tous tes appareils. Si tu modifies l'app sur deux appareils sans synchro entre-temps, une fenêtre te demande quelle version garder (aucune perte silencieuse).
+- **Sauvegarde & export** : voir la section ci-dessous.
+- **Contact** : formulaire pour nous joindre (voir plus bas).
 - **Zone dangereuse** : suppression définitive du compte et de toutes ses données, confirmée par mot de passe.
+
+---
+
+## Sauvegarde & export (JSON / CSV)
+
+Depuis **Mon compte → Sauvegarde & export**, quatre boutons :
+
+- **Sauvegarde (JSON)** : télécharge un fichier contenant **toutes** tes données (tous les mois, comptes, base, thème). C'est ta sauvegarde de sécurité.
+- **Restaurer (JSON)** : recharge un fichier de sauvegarde. ⚠️ Cela **remplace toutes** tes données actuelles (confirmation demandée). Utile pour restaurer ou transférer vers un autre appareil.
+- **Dépenses (CSV)** : exporte **toutes tes dépenses** (colonnes Date, Mois, Catégorie, Montant, Note) dans un fichier ouvrable dans Excel, Google Sheets, etc.
+- **Importer dépenses (CSV)** : ajoute des dépenses depuis un fichier CSV. Chaque ligne est placée **dans le mois correspondant à sa date**, et la catégorie est reconnue par son nom (sinon « Autre »). Une confirmation indique combien de dépenses seront ajoutées.
+
+> Conseil : fais une **sauvegarde JSON** de temps en temps, surtout en mode local sans compte — c'est le meilleur filet de sécurité.
+
+---
+
+## Nous contacter
+
+Menu profil en haut à droite → **Contact**. Un formulaire permet de signaler un **bug**, faire une **suggestion**, poser une **question** ou autre. Renseigne ton email (pré-rempli si tu es connecté) pour qu'on puisse te répondre, valide l'anti-robot, et envoie. Un accusé de réception s'affiche une fois le message parti.
 
 ---
 
@@ -152,6 +176,10 @@ Bouton profil en haut à droite → **Mon compte**.
 **Le report du mois précédent est faux ?** Il se recalcule automatiquement à partir du mois précédent. Vérifie que les revenus reçus et charges payées du mois d'avant sont bien à jour.
 
 **Je ne vois pas l'écran de connexion / la synchro.** C'est normal si la synchronisation Supabase n'a pas été configurée : l'app fonctionne alors en local. Voir le Niveau 3 du [README](README.md).
+
+**Comment faire une sauvegarde ?** Mon compte → Sauvegarde & export → **Sauvegarde (JSON)**. Garde le fichier de côté ; tu pourras tout restaurer avec **Restaurer (JSON)**.
+
+**Puis-je réimporter un export CSV de dépenses ?** Oui : chaque ligne retourne dans le mois de sa date. Garde les colonnes de l'export (Date, Mois, Catégorie, Montant, Note) pour que la reconnaissance des catégories fonctionne.
 
 ---
 
