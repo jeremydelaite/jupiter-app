@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<meta name="theme-color" content="#ec7a2c">
+<meta name="theme-color" content="#f7eddd">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Jupiter">
@@ -2127,7 +2127,7 @@ const ICONS={
 function injectIcons(){ document.querySelectorAll("[data-ic]").forEach(el=>{ el.innerHTML=ICONS[el.dataset.ic]||""; }); }
 
 /* ============ THÈMES ============ */
-const THEME_COLOR={ jupiter:"#ec7a2c", rose:"#b45bd6", nuit:"#141329", menthe:"#14b48a" };
+const THEME_COLOR={ jupiter:"#f7eddd", rose:"#f4ecf8", nuit:"#141329", menthe:"#e7f4ef" }; // couleur de la barre d'état : fond du thème (se fond avec l'app)
 const THEME_HUE={ rose:255, menthe:115, nuit:205 }; // mêmes rotations que le logo
 let faviconLinks=null, faviconOrig=null;
 function retintFavicon(name){

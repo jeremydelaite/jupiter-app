@@ -4,7 +4,7 @@
   "id": "./",
   "start_url": "./",
   "scope": "./",
-  "theme_color": "#ec7a2c",
+  "theme_color": "#f7eddd",
   "background_color": "#f7eddd",
   "display": "standalone",
   "orientation": "portrait",
