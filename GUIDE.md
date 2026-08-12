@@ -76,13 +76,15 @@ Onglet **Dépenses** (ou le bouton **+** depuis l'accueil).
 
 L'onglet **Gérer** regroupe trois sous-onglets.
 
-**Revenus.** Ajoute chaque source (salaire, prime, virement…). Chaque revenu a un montant **prévu** ; coche-le quand il est **reçu** pour le passer en réel. La ligne « Report du mois précédent » est automatique : elle reprend ce qu'il te restait le mois d'avant et ne peut être ni décochée ni supprimée.
+**Revenus.** Ajoute chaque source (salaire, prime, virement…). Chaque revenu a un montant **prévu** ; coche-le quand il est **reçu** pour le passer en réel. La ligne « Report du mois précédent » est automatique (sa case n'est pas modifiable) ; tu peux toutefois la **retirer** pour un mois donné via sa corbeille, puis la **rétablir** avec le bouton en haut de la liste.
 
 **Charges fixes.** Ajoute tes charges récurrentes (loyer, abonnements, assurances…). Chacune a un montant **prévu** ; coche-la quand elle est **payée** pour la compter en réel.
 
 **Budgets.** Fixe un budget prévisionnel par catégorie. Le bouton « aligner » met le budget au niveau de ce que tu as réellement dépensé. Tu peux **créer une catégorie** (nom, couleur, icône), la **modifier** (touche son icône ou son nom) ou la **supprimer**. Si des dépenses y sont déjà rattachées, elle est **masquée** plutôt que supprimée (réaffichable en bas de l'écran) pour ne pas perdre l'historique.
 
-> À valider : sur les champs modifiables, un bouton **« Valider »** apparaît. Tes changements ne s'appliquent qu'une fois validés ; si tu quittes sans valider, l'ancienne valeur revient.
+> À valider : sur les champs modifiables, un bouton **« Valider »** apparaît. Tes changements ne s'appliquent qu'une fois validés ; **si tu quittes l'écran sans valider, l'ancienne valeur revient** (pense donc à valider avant d'aller voir le tableau de bord).
+
+> Aligner réel ↔ prévu : quand tu valides un **montant réel** (revenu reçu, charge payée, versement/remboursement effectué) différent du **prévu**, une fenêtre te propose d'**aligner le prévu sur le réel**. Choisis « Aligner » pour que la prévision colle au réel, ou « Annuler » pour conserver l'écart.
 
 ---
 

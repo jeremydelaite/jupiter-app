@@ -1054,7 +1054,7 @@ function ensureReport(key){
   if((mo.income||[]).some(x=>x.report)) return;
   const pk=prevMonthKey(key);
   if(store.months[pk]){
-    const r=monthLeftFor(store.months[pk]);
+    const r=Math.round(monthLeftFor(store.months[pk])*100)/100;
     mo.income.unshift({name:"Report du mois précédent", planned:r, actual:r, received:true, report:true});
   }
 }
@@ -1068,7 +1068,7 @@ function recomputeReports(){
     if(mo.noReport){ mo.income=(mo.income||[]).filter(x=>!isReportLine(x)); return; } // report désactivé pour ce mois
     const pk=prevMonthKey(k);
     if(!store.months[pk]) return;              // pas de mois précédent → on conserve un éventuel solde initial
-    const r=monthLeftFor(store.months[pk]);
+    const r=Math.round(monthLeftFor(store.months[pk])*100)/100;
     const rep=(mo.income||[]).find(isReportLine);
     if(rep){ rep.report=true; rep.planned=r; rep.actual=r; rep.received=true; }
     else { if(!mo.income) mo.income=[]; mo.income.unshift({name:"Report du mois précédent", planned:r, actual:r, received:true, report:true}); }
@@ -2583,12 +2583,13 @@ let cvCard=null;
 function hideCardValidate(){ cardValidate.style.display="none"; if(cardValidate.parentNode) cardValidate.parentNode.removeChild(cardValidate); cvCard=null; }
 cardValidate.addEventListener("mousedown",e=>e.preventDefault());
 function commitInputs(scope){
+  const aligns=[];
   scope.querySelectorAll("[data-kind]").forEach(inp=>{
     const v=+inp.value||0, k=inp.dataset;
-    if(k.kind==="fixed") M().fixed[+k.i][k.field]=v;
-    else if(k.kind==="income") M().income[+k.i][k.field]=v;
-    else if(k.kind==="saving"){ const s=M().savings[+k.i]; s[k.field]=v; applyCredit(s); }
-    else if(k.kind==="repay"){ const c=M().credits[+k.i]; c[k.field]=v; applyRepay(c); }
+    if(k.kind==="fixed"){ const it=M().fixed[+k.i]; it[k.field]=v; if(k.field==="actual" && Math.abs((+it.planned||0)-(+it.actual||0))>0.005) aligns.push({type:"fixed",i:+k.i}); }
+    else if(k.kind==="income"){ const it=M().income[+k.i]; it[k.field]=v; if(k.field==="actual" && !isReportLine(it) && Math.abs((+it.planned||0)-(+it.actual||0))>0.005) aligns.push({type:"income",i:+k.i}); }
+    else if(k.kind==="saving"){ const s=M().savings[+k.i]; s[k.field]=v; applyCredit(s); if(k.field==="actual" && Math.abs((+s.planned||0)-(+s.actual||0))>0.005) aligns.push({type:"saving",i:+k.i}); }
+    else if(k.kind==="repay"){ const c=M().credits[+k.i]; c[k.field]=v; applyRepay(c); if(k.field==="actual" && Math.abs((+c.planned||0)-(+c.actual||0))>0.005) aligns.push({type:"repay",i:+k.i}); }
     else if(k.kind==="budget") M().budgets[k.catid]=v;
     else if(k.kind==="accbal"){ const a=findAcc(k.id); if(a) a.balance=v; }
     else if(k.kind==="accgoal"){ const a=findAcc(k.id); if(a) a.goal=v; }
@@ -2602,6 +2603,26 @@ function commitInputs(scope){
     else if(k.kind==="bsav") T().savings[+k.i].planned=v;
     else if(k.kind==="bbud") T().budgets[k.catid]=v;
   });
+  return aligns;
+}
+function alignItem(a){
+  if(a.type==="income") return M().income[a.i];
+  if(a.type==="fixed") return M().fixed[a.i];
+  if(a.type==="saving") return M().savings[a.i];
+  return (M().credits||[])[a.i];
+}
+function alignName(a,it){
+  if(a.type==="income"||a.type==="fixed") return it.name;
+  const acc=findAcc(it.accountId); return acc?acc.name:(it.name||"—");
+}
+function offerAlign(aligns){
+  aligns=aligns.filter(a=>alignItem(a));
+  if(!aligns.length){ toast("Modifications enregistrées ✓"); return; }
+  let msg;
+  if(aligns.length===1){ const it=alignItem(aligns[0]);
+    msg=`Le réel de « ${alignName(aligns[0],it)} » (${fmt(+it.actual||0)}) diffère du prévu (${fmt(+it.planned||0)}). Aligner le prévu sur le réel ?`; }
+  else msg=`${aligns.length} montants réels diffèrent de leur prévu. Aligner les prévus sur les réels ?`;
+  confirmDialog(msg,()=>{ aligns.forEach(a=>{ const it=alignItem(a); if(it) it.planned=+it.actual||0; }); save(); render(); toast("Prévu aligné sur le réel ✓"); },"Aligner",false);
 }
 function revertInputs(scope){
   scope.querySelectorAll("[data-kind]").forEach(inp=>{
@@ -2626,9 +2647,10 @@ function revertInputs(scope){
   });
 }
 cardValidate.addEventListener("click",()=>{
-  if(cvCard) commitInputs(cvCard);
+  const aligns = cvCard ? commitInputs(cvCard) : [];
   if(document.activeElement && document.activeElement.blur) document.activeElement.blur();
-  hideCardValidate(); render(); toast("Modifications enregistrées ✓");
+  hideCardValidate(); render();
+  if(aligns && aligns.length) offerAlign(aligns); else toast("Modifications enregistrées ✓");
 });
 document.addEventListener("focusin",e=>{
   const inp=e.target;

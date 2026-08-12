@@ -13,7 +13,8 @@ Interface « liquid glass » moderne, responsive mobile + ordinateur. Aucune dé
 - **Tableau de bord** : solde réel disponible, restant prévu en fin de mois avec jours restants et budget par jour, répartition des dépenses en camembert, budgets par catégorie.
 - **Suivi des dépenses** : ajout rapide, édition, regroupement par jour avec sous-totaux, filtre par catégorie.
 - **Charges fixes** : montant prévu qui devient réel une fois la charge cochée comme payée.
-- **Revenus** : prévu → reçu, avec report automatique du solde du mois précédent.
+- **Revenus** : prévu → reçu, avec report automatique du solde du mois précédent (retirable/rétablissable par mois).
+- **Prévu ↔ réel** : quand un montant réel validé diffère du prévu, l'app propose d'aligner la prévision sur le réel (revenus, charges, épargne, remboursements).
 - **Épargne** : comptes / livrets à solde cumulé et total d'épargne.
   - **Objectifs** avec estimation du délai au rythme actuel, et **date cible optionnelle** (activable par compte) qui calcule le versement mensuel nécessaire et indique si le rythme est suffisant.
   - **Évolution de l'épargne** : graphe du solde total mois par mois (6 mois / 12 mois / tout), ligne d'objectif, versement moyen et évolution sur la période.
